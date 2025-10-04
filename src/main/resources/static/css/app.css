@@ -43,6 +43,21 @@ body {
   align-items: center;
 }
 
+.navbar-brand a {
+  font-size: 1.1rem;
+}
+
+.navbar-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.navbar-tagline {
+  font-size: 0.85rem;
+  color: var(--text-subtle);
+}
+
 .navbar a {
   color: var(--text-primary);
   text-decoration: none;
@@ -51,6 +66,113 @@ body {
 
 .navbar a:hover {
   color: var(--accent);
+}
+
+.navbar-auth {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.navbar-auth > div {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.navbar-auth form {
+  margin: 0;
+}
+
+.navbar-username {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.navbar-username:hover {
+  color: var(--accent);
+}
+
+.button-compact {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.875rem;
+}
+
+.profile-overview {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-meta {
+  margin: 0.5rem 0 0;
+  color: var(--text-subtle);
+}
+
+.profile-role {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.profile-role.role-admin {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.profile-joined {
+  display: flex;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+}
+
+.stats-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.stats-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.stats-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.recent-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .container {
@@ -254,6 +376,17 @@ footer {
   margin-bottom: 1.75rem;
 }
 
+.post-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.post-header-text {
+  flex: 1;
+}
+
 .post-page-header h1 {
   margin: 0 0 0.75rem;
   font-size: 2rem;
@@ -266,6 +399,75 @@ footer {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.post-vote-panel {
+  min-width: 220px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.vote-score {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.vote-counts {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.vote-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.vote-actions form {
+  margin: 0;
+}
+
+.vote-button {
+  background: var(--accent);
+  border: none;
+  color: #0f172a;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vote-button:hover {
+  opacity: 0.85;
+}
+
+.vote-button--down {
+  background: var(--danger);
+  color: #fff;
+}
+
+.vote-button.is-active {
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+  transform: translateY(-2px);
+}
+
+.vote-button--down.is-active {
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.35);
+}
+
+.vote-guest {
+  font-size: 0.85rem;
+  color: var(--text-subtle);
 }
 
 .post-content {
@@ -310,6 +512,31 @@ footer {
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
   padding: 1.25rem;
+}
+
+.comment-body {
+  white-space: pre-wrap;
+}
+
+.comment-vote {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.comment-vote .vote-score {
+  font-size: 1.4rem;
+}
+
+.comment-vote .vote-actions {
+  gap: 0.5rem;
+}
+
+.comment-vote .vote-button {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
 }
 
 .comment-meta {
@@ -405,6 +632,15 @@ footer {
   margin-bottom: 1rem;
 }
 
+.flash-info {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #bae6fd;
+  padding: 0.875rem 1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
 .auth-banner {
   margin-top: 1.5rem;
   padding: 1rem 1.25rem;
@@ -422,6 +658,14 @@ footer {
   .navbar {
     flex-direction: column;
     gap: 0.75rem;
+  }
+
+  .post-header-content {
+    flex-direction: column;
+  }
+
+  .post-vote-panel {
+    width: 100%;
   }
 
   .post-card {

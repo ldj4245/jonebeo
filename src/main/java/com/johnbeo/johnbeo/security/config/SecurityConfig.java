@@ -44,7 +44,9 @@ public class SecurityConfig {
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/error", "/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
+                .requestMatchers("/", "/error", "/auth/**", "/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/profile").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/auth/logout").permitAll()
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/posts/**", "/api/boards/**", "/api/coins/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/posts/**", "/boards/**").permitAll()

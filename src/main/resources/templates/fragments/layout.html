@@ -9,8 +9,22 @@
     <header th:fragment="header">
       <div class="header">
         <nav class="navbar">
-          <a href="/">존비오 커뮤니티</a>
-          <div>코인 데이터 · 게시판 · 커뮤니티</div>
+          <div class="navbar-brand">
+            <a href="/">존비오 커뮤니티</a>
+            <div class="navbar-tagline">코인 데이터 · 게시판 · 커뮤니티</div>
+          </div>
+          <div class="navbar-auth">
+            <div th:if="${#authorization.expression('isAuthenticated()')}">
+              <a class="navbar-username" th:href="@{/profile}" th:text="${#authentication.principal?.nickname ?: #authentication.name}"></a>
+              <form th:action="@{/auth/logout}" method="post">
+                <button type="submit" class="button-secondary button-compact">로그아웃</button>
+              </form>
+            </div>
+            <div th:if="${#authorization.expression('!isAuthenticated()')}">
+              <a class="button-secondary button-compact" th:href="@{/auth/login}">로그인</a>
+              <a class="button button-compact" th:href="@{/auth/register}">회원가입</a>
+            </div>
+          </div>
         </nav>
       </div>
     </header>

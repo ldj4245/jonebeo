@@ -4,14 +4,64 @@
   <body>
     <header th:replace="fragments/layout :: header"></header>
     <main class="container">
+      <div
+        class="flash-error"
+        th:if="${voteError != null}"
+        th:text="${voteError}"
+      ></div>
+
       <section class="post-page-header">
-        <h1 th:text="${post.title}"></h1>
-        <div class="post-meta-list">
-          <span th:text="${post.author.nickname}"></span>
-          <span
-            th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"
-          ></span>
-          <span th:text="${'조회 ' + post.viewCount}"></span>
+        <div class="post-header-content">
+          <div class="post-header-text">
+            <h1 th:text="${post.title}"></h1>
+            <div class="post-meta-list">
+              <span th:text="${post.author.nickname}"></span>
+              <span
+                th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"
+              ></span>
+              <span th:text="${'조회 ' + post.viewCount}"></span>
+            </div>
+          </div>
+          <div class="post-vote-panel" th:if="${postVotes != null}">
+            <div class="vote-score" th:text="${postVotes.score}">0</div>
+            <div class="vote-counts">
+              <span th:text="${'추천 ' + postVotes.upVotes}"></span>
+              <span th:text="${'비추천 ' + postVotes.downVotes}"></span>
+            </div>
+            <div class="vote-actions" th:if="${isAuthenticated}">
+              <form
+                th:action="@{'/votes/posts/' + ${post.id}}"
+                method="post"
+              >
+                <input type="hidden" name="value" value="1" />
+                <button
+                  type="submit"
+                  class="vote-button"
+                  th:classappend="${postVotes.userVote != null && postVotes.userVote == 1} ? ' is-active'"
+                >
+                  추천
+                </button>
+              </form>
+              <form
+                th:action="@{'/votes/posts/' + ${post.id}}"
+                method="post"
+              >
+                <input type="hidden" name="value" value="-1" />
+                <button
+                  type="submit"
+                  class="vote-button vote-button--down"
+                  th:classappend="${postVotes.userVote != null && postVotes.userVote == -1} ? ' is-active'"
+                >
+                  비추천
+                </button>
+              </form>
+            </div>
+            <div class="vote-guest" th:if="${!isAuthenticated}">
+              <a class="button-secondary button-compact" th:href="@{/auth/login}">
+                로그인 후 투표하기
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -83,7 +133,52 @@
             th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}"
           ></span>
         </div>
-        <div th:text="${comment.content}"></div>
+        <div class="comment-body" th:text="${comment.content}"></div>
+        <div class="comment-vote" th:with="vote=${commentVotes[comment.id]}">
+          <div class="vote-score" th:text="${vote != null ? vote.score : 0}">0</div>
+          <div class="vote-counts">
+            <span th:text="${'추천 ' + (vote != null ? vote.upVotes : 0)}"></span>
+            <span th:text="${'비추천 ' + (vote != null ? vote.downVotes : 0)}"></span>
+          </div>
+          <div class="vote-actions" th:if="${isAuthenticated}">
+            <form
+              th:action="@{'/votes/comments/' + ${comment.id}}"
+              method="post"
+            >
+              <input type="hidden" name="value" value="1" />
+              <input type="hidden" name="postId" th:value="${post.id}" />
+              <button
+                type="submit"
+                class="vote-button"
+                th:classappend="${vote != null && vote.userVote != null && vote.userVote == 1} ? ' is-active'"
+              >
+                추천
+              </button>
+            </form>
+            <form
+              th:action="@{'/votes/comments/' + ${comment.id}}"
+              method="post"
+            >
+              <input type="hidden" name="value" value="-1" />
+              <input type="hidden" name="postId" th:value="${post.id}" />
+              <button
+                type="submit"
+                class="vote-button vote-button--down"
+                th:classappend="${vote != null && vote.userVote != null && vote.userVote == -1} ? ' is-active'"
+              >
+                비추천
+              </button>
+            </form>
+          </div>
+          <div class="vote-guest" th:if="${!isAuthenticated}">
+            <a
+              class="button-secondary button-compact"
+              th:href="@{/auth/login}"
+            >
+              로그인 후 투표
+            </a>
+          </div>
+        </div>
         <div class="comment-actions">
           <form
             th:if="${currentUserId != null && currentUserId == comment.author.id}"

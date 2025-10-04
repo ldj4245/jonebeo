@@ -11,8 +11,12 @@ import com.johnbeo.johnbeo.domain.comment.service.CommentService;
 import com.johnbeo.johnbeo.domain.post.dto.PostResponse;
 import com.johnbeo.johnbeo.domain.post.dto.PostSummaryResponse;
 import com.johnbeo.johnbeo.domain.post.service.PostService;
+import com.johnbeo.johnbeo.domain.vote.dto.VoteSummaryResponse;
+import com.johnbeo.johnbeo.domain.vote.service.VoteService;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +38,7 @@ public class CommunityViewController {
     private final BoardService boardService;
     private final PostService postService;
     private final CommentService commentService;
+    private final VoteService voteService;
     private final CryptoDataService cryptoDataService;
     private final CoinGeckoProperties coinGeckoProperties;
 
@@ -71,12 +76,31 @@ public class CommunityViewController {
     ) {
         PostResponse post = postService.readPost(id);
         List<CommentResponse> comments = commentService.getCommentsByPost(id);
+        VoteSummaryResponse postVotes = voteService.getPostVotes(id, principal);
+        Map<Long, VoteSummaryResponse> commentVotes = loadCommentVotes(comments, principal);
         model.addAttribute("pageTitle", post.title());
         model.addAttribute("post", post);
         model.addAttribute("comments", comments);
+        model.addAttribute("postVotes", postVotes);
+        model.addAttribute("commentVotes", commentVotes);
         model.addAttribute("isAuthenticated", principal != null);
         model.addAttribute("currentUserId", principal != null ? principal.getId() : null);
         return "post/detail";
+    }
+
+    private Map<Long, VoteSummaryResponse> loadCommentVotes(List<CommentResponse> comments, MemberPrincipal principal) {
+        Map<Long, VoteSummaryResponse> votes = new HashMap<>();
+        if (comments == null) {
+            return votes;
+        }
+        for (CommentResponse comment : comments) {
+            VoteSummaryResponse summary = voteService.getCommentVotes(comment.id(), principal);
+            votes.put(comment.id(), summary);
+            if (comment.replies() != null && !comment.replies().isEmpty()) {
+                votes.putAll(loadCommentVotes(comment.replies(), principal));
+            }
+        }
+        return votes;
     }
 
     private List<CoinMarketDto> fetchMarketSnapshot() {
