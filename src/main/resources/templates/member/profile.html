@@ -1,62 +1,86 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
-<body>
-<header th:replace="~{fragments/layout :: header}"></header>
-<main class="container">
-    <section class="profile-overview card">
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+  <body>
+    <header th:replace="~{fragments/layout :: header}"></header>
+    <main class="container">
+      <section class="profile-overview card">
         <div class="profile-header">
-            <div>
-                <h1 th:text="${profile.nickname}">닉네임</h1>
-                <p class="profile-meta">
-                    <span th:text="${'아이디: ' + profile.username()}"></span>
-                    <span> · </span>
-                    <span th:text="${'이메일: ' + profile.email()}"></span>
-                </p>
-            </div>
-            <div class="profile-role" th:text="${profile.role().name()}" th:classappend="${profile.role().name() == 'ADMIN'} ? ' role-admin' : ' role-user'">ROLE</div>
+          <div>
+            <h1 th:text="${profile.nickname}">닉네임</h1>
+            <p class="profile-meta">
+              <span th:text="${'아이디: ' + profile.username()}"></span>
+              <span> · </span>
+              <span th:text="${'이메일: ' + profile.email()}"></span>
+            </p>
+          </div>
+          <div
+            class="profile-role"
+            th:text="${profile.role().name()}"
+            th:classappend="${profile.role().name() == 'ADMIN'} ? ' role-admin' : ' role-user'"
+          >
+            ROLE
+          </div>
         </div>
         <div class="profile-joined">
-            <span>가입일</span>
-            <span th:text="${profile.joinedAt() != null ? #temporals.format(profile.joinedAt(), 'yyyy-MM-dd HH:mm') : '정보 없음'}"></span>
+          <span>가입일</span>
+          <span
+            th:text="${profile.joinedAt() != null ? #temporals.format(profile.joinedAt(), 'yyyy-MM-dd HH:mm') : '정보 없음'}"
+          ></span>
         </div>
-    </section>
+      </section>
 
-    <section class="stats-grid">
+      <section class="stats-grid">
         <article class="stats-card">
-            <h2>작성한 게시글</h2>
-            <p class="stats-value" th:text="${profile.postCount()}">0</p>
+          <h2>작성한 게시글</h2>
+          <p class="stats-value" th:text="${profile.postCount()}">0</p>
         </article>
         <article class="stats-card">
-            <h2>작성한 댓글</h2>
-            <p class="stats-value" th:text="${profile.commentCount()}">0</p>
+          <h2>작성한 댓글</h2>
+          <p class="stats-value" th:text="${profile.commentCount()}">0</p>
         </article>
-    </section>
+      </section>
 
-    <section class="recent-posts">
+      <section class="recent-posts">
         <h2>최근 게시글</h2>
-        <div class="post-list" th:if="${!#lists.isEmpty(profile.recentPosts())}">
-            <article class="post-card" th:each="post : ${profile.recentPosts()}">
-                <div>
-                    <a class="post-title" th:href="@{'/posts/' + ${post.id()}}" th:text="${post.title()}"></a>
-                    <div class="post-meta">
-                        <span th:text="${post.boardName()}"></span>
-                        <span> · </span>
-                        <span th:text="${#temporals.format(post.createdAt(), 'yyyy-MM-dd HH:mm')}"></span>
-                        <span> · 조회 </span>
-                        <span th:text="${post.viewCount()}"></span>
-                    </div>
-                </div>
-                <div class="post-stats">
-                    <a class="button-secondary" th:href="@{'/boards/' + ${post.boardSlug()}}">게시판 보기</a>
-                </div>
-            </article>
+        <div
+          class="post-list"
+          th:if="${!#lists.isEmpty(profile.recentPosts())}"
+        >
+          <article class="post-card" th:each="post : ${profile.recentPosts()}">
+            <div>
+              <a
+                class="post-title"
+                th:href="@{'/posts/' + ${post.id()}}"
+                th:text="${post.title()}"
+              ></a>
+              <div class="post-meta">
+                <span th:text="${post.boardName()}"></span>
+                <span> · </span>
+                <span
+                  th:text="${#temporals.format(post.createdAt(), 'yyyy-MM-dd HH:mm')}"
+                ></span>
+                <span> · 조회 </span>
+                <span th:text="${post.viewCount()}"></span>
+              </div>
+            </div>
+            <div class="post-stats">
+              <a
+                class="button-secondary"
+                th:href="@{'/boards/' + ${post.boardSlug()}}"
+                >게시판 보기</a
+              >
+            </div>
+          </article>
         </div>
-        <div class="empty-state" th:if="${#lists.isEmpty(profile.recentPosts())}">
-            아직 작성한 게시글이 없습니다. 첫 게시글을 작성해보세요!
+        <div
+          class="empty-state"
+          th:if="${#lists.isEmpty(profile.recentPosts())}"
+        >
+          아직 작성한 게시글이 없습니다. 첫 게시글을 작성해보세요!
         </div>
-    </section>
-</main>
-<footer th:replace="~{fragments/layout :: footer}"></footer>
-</body>
+      </section>
+    </main>
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+  </body>
 </html>

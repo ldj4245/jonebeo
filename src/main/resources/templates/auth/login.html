@@ -1,38 +1,70 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
-<body>
-<header th:replace="~{fragments/layout :: header}"></header>
-<main class="container">
-    <section class="form-card">
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+  <body>
+    <header th:replace="~{fragments/layout :: header}"></header>
+    <main class="container">
+      <section class="form-card">
         <h1>로그인</h1>
-        <div th:if="${loginMessage != null}" class="flash-info" th:text="${loginMessage}"></div>
+        <div
+          th:if="${loginMessage != null}"
+          class="flash-info"
+          th:text="${loginMessage}"
+        ></div>
         <form th:action="@{/auth/login}" th:object="${loginForm}" method="post">
-            <input type="hidden" name="redirect" th:value="${redirect}"/>
+          <input type="hidden" name="redirect" th:value="${redirect}" />
 
-            <div th:if="${#fields.hasGlobalErrors()}">
-                <div class="flash-error" th:each="err : ${#fields.globalErrors()}" th:text="${err}"></div>
-            </div>
+          <div th:if="${#fields.hasGlobalErrors()}">
+            <div
+              class="flash-error"
+              th:each="err : ${#fields.globalErrors()}"
+              th:text="${err}"
+            ></div>
+          </div>
 
-            <div>
-                <label for="username">아이디</label>
-                <input id="username" type="text" th:field="*{username}" placeholder="아이디" autocomplete="username" required />
-                <div class="flash-error" th:if="${#fields.hasErrors('username')}" th:each="err : ${#fields.errors('username')}" th:text="${err}"></div>
-            </div>
+          <div>
+            <label for="username">아이디</label>
+            <input
+              id="username"
+              type="text"
+              th:field="*{username}"
+              placeholder="아이디"
+              autocomplete="username"
+              required
+            />
+            <div
+              class="flash-error"
+              th:if="${#fields.hasErrors('username')}"
+              th:each="err : ${#fields.errors('username')}"
+              th:text="${err}"
+            ></div>
+          </div>
 
-            <div>
-                <label for="password">비밀번호</label>
-                <input id="password" type="password" th:field="*{password}" placeholder="비밀번호" autocomplete="current-password" required />
-                <div class="flash-error" th:if="${#fields.hasErrors('password')}" th:each="err : ${#fields.errors('password')}" th:text="${err}"></div>
-            </div>
+          <div>
+            <label for="password">비밀번호</label>
+            <input
+              id="password"
+              type="password"
+              th:field="*{password}"
+              placeholder="비밀번호"
+              autocomplete="current-password"
+              required
+            />
+            <div
+              class="flash-error"
+              th:if="${#fields.hasErrors('password')}"
+              th:each="err : ${#fields.errors('password')}"
+              th:text="${err}"
+            ></div>
+          </div>
 
-            <div class="form-actions">
-                <a class="button-secondary" th:href="@{/auth/register}">회원가입</a>
-                <button type="submit" class="button">로그인</button>
-            </div>
+          <div class="form-actions">
+            <a class="button-secondary" th:href="@{/auth/register}">회원가입</a>
+            <button type="submit" class="button">로그인</button>
+          </div>
         </form>
-    </section>
-</main>
-<footer th:replace="~{fragments/layout :: footer}"></footer>
-</body>
+      </section>
+    </main>
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+  </body>
 </html>
