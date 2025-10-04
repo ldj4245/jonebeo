@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="fragments/layout :: head(${pageTitle})"></head>
+  <body>
+    <header th:replace="fragments/layout :: header"></header>
+    <main class="container">
+      <section class="form-card">
+        <h1 th:text="${pageTitle}">게시글 작성</h1>
+        <form
+          th:action="${postId != null} ? @{/posts/{id}/edit(id=${postId})} : @{/posts}"
+          th:object="${postForm}"
+          method="post"
+        >
+          <div th:if="${#fields.hasAnyErrors()}">
+            <div
+              class="flash-error"
+              th:each="err : ${#fields.errors('*')}"
+              th:text="${err}"
+            ></div>
+          </div>
+          <div>
+            <label for="boardId">게시판</label>
+            <select id="boardId" th:field="*{boardId}" required>
+              <option value="" disabled th:selected="${*{boardId} == null}">
+                게시판을 선택하세요
+              </option>
+              <option
+                th:each="board : ${boards}"
+                th:value="${board.id}"
+                th:text="${board.name}"
+              ></option>
+            </select>
+          </div>
+          <div>
+            <label for="title">제목</label>
+            <input
+              id="title"
+              type="text"
+              th:field="*{title}"
+              placeholder="제목을 입력하세요"
+              required
+            />
+          </div>
+          <div>
+            <label for="content">내용</label>
+            <textarea
+              id="content"
+              th:field="*{content}"
+              placeholder="내용을 입력하세요"
+              required
+            ></textarea>
+          </div>
+          <div class="form-actions">
+            <a
+              class="button-secondary"
+              th:href="${postId != null} ? @{'/posts/' + ${postId}} : @{/}"
+              >취소</a
+            >
+            <button
+              type="submit"
+              class="button"
+              th:text="${postId != null} ? '수정 완료' : '작성 완료'}"
+            ></button>
+          </div>
+        </form>
+      </section>
+    </main>
+    <footer th:replace="fragments/layout :: footer"></footer>
+  </body>
+</html>

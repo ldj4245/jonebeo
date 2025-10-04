@@ -1,0 +1,148 @@
+package com.johnbeo.johnbeo.domain.post.service;
+
+import com.johnbeo.johnbeo.common.exception.ResourceNotFoundException;
+import com.johnbeo.johnbeo.common.response.PageResponse;
+import com.johnbeo.johnbeo.domain.board.dto.BoardResponse;
+import com.johnbeo.johnbeo.domain.board.entity.Board;
+import com.johnbeo.johnbeo.domain.board.repository.BoardRepository;
+import com.johnbeo.johnbeo.domain.member.entity.Member;
+import com.johnbeo.johnbeo.domain.member.repository.MemberRepository;
+import com.johnbeo.johnbeo.domain.post.dto.CreatePostRequest;
+import com.johnbeo.johnbeo.domain.post.dto.PostAuthorDto;
+import com.johnbeo.johnbeo.domain.post.dto.PostResponse;
+import com.johnbeo.johnbeo.domain.post.dto.PostSummaryResponse;
+import com.johnbeo.johnbeo.domain.post.dto.UpdatePostRequest;
+import com.johnbeo.johnbeo.domain.post.entity.Post;
+import com.johnbeo.johnbeo.domain.post.repository.PostRepository;
+import com.johnbeo.johnbeo.security.model.MemberPrincipal;
+import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class PostService {
+
+    private final PostRepository postRepository;
+    private final BoardRepository boardRepository;
+    private final MemberRepository memberRepository;
+
+    public PageResponse<PostSummaryResponse> getAllPosts(Pageable pageable) {
+        Page<Post> page = postRepository.findAll(pageable);
+        return PageResponse.from(page.map(this::toPostSummaryResponse));
+    }
+
+    public PageResponse<PostSummaryResponse> getPostsByBoardSlug(String slug, Pageable pageable) {
+        Board board = boardRepository.findBySlug(slug)
+            .orElseThrow(() -> new ResourceNotFoundException("게시판을 찾을 수 없습니다: " + slug));
+        Page<Post> page = postRepository.findByBoardId(board.getId(), pageable);
+        return PageResponse.from(page.map(this::toPostSummaryResponse));
+    }
+
+    public PostResponse getPost(Long id) {
+        Post post = findPost(id);
+        return toPostResponse(post);
+    }
+
+    @Transactional
+    public PostResponse readPost(Long id) {
+        Post post = findPost(id);
+        post.incrementViewCount();
+        return toPostResponse(post);
+    }
+
+    @Transactional
+    public PostResponse createPost(CreatePostRequest request, MemberPrincipal principal) {
+        Member member = requireMember(principal);
+        Board board = boardRepository.findById(request.boardId())
+            .orElseThrow(() -> new ResourceNotFoundException("게시판을 찾을 수 없습니다: " + request.boardId()));
+
+        Post post = Post.builder()
+            .author(member)
+            .board(board)
+            .title(request.title())
+            .content(request.content())
+            .build();
+
+        Post saved = postRepository.save(post);
+        return toPostResponse(saved);
+    }
+
+    @Transactional
+    public PostResponse updatePost(Long id, UpdatePostRequest request, MemberPrincipal principal) {
+        Post post = findPost(id);
+        validateOwnership(post, principal);
+        post.updateContent(request.title(), request.content());
+        return toPostResponse(post);
+    }
+
+    @Transactional
+    public void deletePost(Long id, MemberPrincipal principal) {
+        Post post = findPost(id);
+        validateOwnership(post, principal);
+        postRepository.delete(post);
+    }
+
+    private Post findPost(Long id) {
+        return postRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("게시글을 찾을 수 없습니다: " + id));
+    }
+
+    private Member requireMember(MemberPrincipal principal) {
+        if (principal == null) {
+            throw new AccessDeniedException("인증이 필요합니다.");
+        }
+        return memberRepository.findById(principal.getId())
+            .orElseThrow(() -> new ResourceNotFoundException("회원 정보를 찾을 수 없습니다: " + principal.getId()));
+    }
+
+    private void validateOwnership(Post post, MemberPrincipal principal) {
+        Member member = requireMember(principal);
+        if (!Objects.equals(post.getAuthor().getId(), member.getId())) {
+            throw new AccessDeniedException("게시글에 대한 권한이 없습니다.");
+        }
+    }
+
+    private PostResponse toPostResponse(Post post) {
+        return new PostResponse(
+            post.getId(),
+            post.getTitle(),
+            post.getContent(),
+            post.getViewCount(),
+            post.getCreatedAt(),
+            post.getUpdatedAt(),
+            toBoardResponse(post.getBoard()),
+            toPostAuthor(post.getAuthor())
+        );
+    }
+
+    private PostSummaryResponse toPostSummaryResponse(Post post) {
+        return new PostSummaryResponse(
+            post.getId(),
+            post.getTitle(),
+            post.getViewCount(),
+            post.getCreatedAt(),
+            toPostAuthor(post.getAuthor())
+        );
+    }
+
+    private BoardResponse toBoardResponse(Board board) {
+        return new BoardResponse(
+            board.getId(),
+            board.getName(),
+            board.getDescription(),
+            board.getSlug(),
+            board.getType(),
+            board.getCreatedAt()
+        );
+    }
+
+    private PostAuthorDto toPostAuthor(Member member) {
+        return new PostAuthorDto(member.getId(), member.getNickname());
+    }
+}

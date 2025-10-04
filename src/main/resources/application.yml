@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: coin-community
+  profiles:
+    active: dev
+    group:
+      local:
+        - dev
+  main:
+    allow-bean-definition-overriding: true
+
+logging:
+  level:
+    "[org.springframework.security]": INFO
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:this_is_a_local_development_secret_key_change_me_please_1234567890}
+    access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:1800}
+    refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800}
+
+coingecko:
+  base-url: https://api.coingecko.com/api/v3
+  market:
+    vs-currency: usd
+    per-page: 100
+  simple-price:
+    vs-currency: usd

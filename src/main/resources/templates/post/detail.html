@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="fragments/layout :: head(${pageTitle})"></head>
+  <body>
+    <header th:replace="fragments/layout :: header"></header>
+    <main class="container">
+      <section class="post-page-header">
+        <h1 th:text="${post.title}"></h1>
+        <div class="post-meta-list">
+          <span th:text="${post.author.nickname}"></span>
+          <span
+            th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"
+          ></span>
+          <span th:text="${'조회 ' + post.viewCount}"></span>
+        </div>
+      </section>
+
+      <article class="post-content">
+        <pre th:text="${post.content}"></pre>
+      </article>
+
+      <div class="post-footer">
+        <a th:href="@{'/boards/' + ${post.board.slug}}"
+          >← 게시판으로 돌아가기</a
+        >
+        <a
+          class="button"
+          th:href="@{'/posts/' + ${post.id} + '/edit'}"
+          th:if="${currentUserId != null && currentUserId == post.author.id}"
+          >게시글 수정</a
+        >
+      </div>
+
+      <section id="comments" class="comment-section">
+        <h2>댓글</h2>
+        <div
+          class="flash-error"
+          th:if="${commentError != null}"
+          th:text="${commentError}"
+        ></div>
+
+        <div th:if="${isAuthenticated}" class="form-card">
+          <form th:action="@{'/comments/post/' + ${post.id}}" method="post">
+            <label for="comment-content">댓글 작성</label>
+            <textarea
+              id="comment-content"
+              name="content"
+              placeholder="이 글에 대해 이야기해보세요"
+              required
+            ></textarea>
+            <div class="form-actions">
+              <button type="submit" class="button">댓글 등록</button>
+            </div>
+          </form>
+        </div>
+        <div class="auth-banner" th:if="${!isAuthenticated}">
+          댓글을 작성하려면 로그인하세요.
+        </div>
+
+        <div class="comment-list" th:if="${!#lists.isEmpty(comments)}">
+          <div th:each="comment : ${comments}">
+            <th:block
+              th:replace="~{::commentFragment(comment=${comment}, depth=0)}"
+            ></th:block>
+          </div>
+        </div>
+        <div class="empty-state" th:if="${#lists.isEmpty(comments)}">
+          아직 댓글이 없습니다. 첫 댓글을 남겨보세요!
+        </div>
+      </section>
+    </main>
+    <footer th:replace="fragments/layout :: footer"></footer>
+
+    <th:block th:fragment="commentFragment(comment, depth)">
+      <article
+        th:id="${'comment-' + comment.id}"
+        class="comment-card"
+        th:classappend="${depth > 0} ? ' comment-reply'"
+      >
+        <div class="comment-meta">
+          <span th:text="${comment.author.nickname}"></span>
+          <span
+            th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}"
+          ></span>
+        </div>
+        <div th:text="${comment.content}"></div>
+        <div class="comment-actions">
+          <form
+            th:if="${currentUserId != null && currentUserId == comment.author.id}"
+            th:action="@{'/comments/' + ${comment.id} + '/delete'}"
+            method="post"
+          >
+            <input type="hidden" name="postId" th:value="${post.id}" />
+            <button type="submit" class="button-secondary">삭제</button>
+          </form>
+        </div>
+        <div class="reply-form" th:if="${isAuthenticated}">
+          <form th:action="@{'/comments/post/' + ${post.id}}" method="post">
+            <input type="hidden" name="parentId" th:value="${comment.id}" />
+            <textarea
+              name="content"
+              placeholder="답글을 남겨보세요"
+              required
+            ></textarea>
+            <div class="form-actions">
+              <button type="submit" class="button">답글 등록</button>
+            </div>
+          </form>
+        </div>
+      </article>
+      <div th:each="reply : ${comment.replies}">
+        <th:block
+          th:replace="~{::commentFragment(comment=${reply}, depth=${depth + 1})}"
+        ></th:block>
+      </div>
+    </th:block>
+  </body>
+</html>
