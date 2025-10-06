@@ -7,4 +7,8 @@ public record MarketChartDto(
     List<MarketChartPoint> marketCaps,
     List<MarketChartPoint> totalVolumes
 ) {
+
+    public static MarketChartDto empty() {
+        return new MarketChartDto(List.of(), List.of(), List.of());
+    }
 }

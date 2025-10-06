@@ -12,6 +12,7 @@ import com.johnbeo.johnbeo.cryptodata.dto.MarketChartResponse;
 import com.johnbeo.johnbeo.cryptodata.dto.SimplePriceDto;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -19,6 +20,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
@@ -26,6 +30,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CryptoDataService {
@@ -34,9 +39,11 @@ public class CryptoDataService {
     private static final String CACHE_DETAIL = "coins.detail";
     private static final String CACHE_MARKET_CHART = "coins.marketChart";
     private static final String CACHE_SIMPLE_PRICE = "coins.simplePrice";
+    private static final String CACHE_MARKET_BY_IDS = "coins.marketByIds";
 
     private final WebClient coinGeckoWebClient;
     private final CoinGeckoProperties properties;
+    private final CacheManager cacheManager;
 
     @Cacheable(value = CACHE_MARKET, key = "#vsCurrency + ':' + #perPage + ':' + #page")
     public List<CoinMarketDto> getMarketCoins(int perPage, int page, String vsCurrency) {
@@ -63,9 +70,56 @@ public class CryptoDataService {
         }
     }
 
+    @Cacheable(value = CACHE_MARKET_BY_IDS, key = "#vsCurrency + ':' + #root.target.cacheKeyFor(#coinIds)")
+    public List<CoinMarketDto> getMarketCoinsByIds(List<String> coinIds, String vsCurrency) {
+        if (coinIds == null || coinIds.isEmpty()) {
+            return List.of();
+        }
+        List<String> normalizedIds = coinIds.stream()
+            .filter(StringUtils::hasText)
+            .map(id -> id.trim().toLowerCase(Locale.ROOT))
+            .collect(Collectors.toCollection(LinkedHashSet::new))
+            .stream()
+            .toList();
+        if (normalizedIds.isEmpty()) {
+            return List.of();
+        }
+        String normalizedCurrency = normalizeCurrency(vsCurrency, properties.getMarket().getVsCurrency());
+        try {
+            return Objects.requireNonNull(coinGeckoWebClient.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/coins/markets")
+                    .queryParam("vs_currency", normalizedCurrency)
+                    .queryParam("ids", String.join(",", normalizedIds))
+                    .queryParam("order", "market_cap_desc")
+                    .queryParam("sparkline", false)
+                    .queryParam("price_change_percentage", "24h")
+                    .build())
+                .retrieve()
+                .bodyToFlux(CoinMarketDto.class)
+                .collectList()
+                .block());
+        } catch (WebClientResponseException ex) {
+            throw toExternalApiException("CoinGecko market data by ids", ex);
+        } catch (Exception ex) {
+            throw new ExternalApiException("Failed to fetch CoinGecko market data by ids", ex);
+        }
+    }
+
+    public String cacheKeyFor(List<String> coinIds) {
+        if (coinIds == null || coinIds.isEmpty()) {
+            return "";
+        }
+        return coinIds.stream()
+            .filter(StringUtils::hasText)
+            .map(id -> id.trim().toLowerCase(Locale.ROOT))
+            .collect(Collectors.joining(","));
+    }
+
     @Cacheable(value = CACHE_DETAIL, key = "#coinId + ':' + #vsCurrency")
     public CoinDetailDto getCoinDetail(String coinId, String vsCurrency) {
         String normalizedCurrency = normalizeCurrency(vsCurrency, properties.getMarket().getVsCurrency());
+        String cacheKey = detailCacheKey(coinId, normalizedCurrency);
         try {
             CoinDetailResponse response = coinGeckoWebClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -87,23 +141,40 @@ public class CryptoDataService {
 
             return toCoinDetailDto(response, normalizedCurrency);
         } catch (WebClientResponseException ex) {
+            if (ex.getStatusCode().value() == 429) {
+                CoinDetailDto cached = getCachedCoinDetail(cacheKey);
+                if (cached != null) {
+                    log.warn("CoinGecko rate limit hit for coin detail [{}], serving cached data", cacheKey);
+                    return cached;
+                }
+                throw new ExternalApiException("CoinGecko rate limit exceeded. Please try again in a moment.", ex);
+            }
             throw toExternalApiException("CoinGecko coin detail", ex);
         } catch (Exception ex) {
             throw new ExternalApiException("Failed to fetch CoinGecko coin detail", ex);
         }
     }
 
-    @Cacheable(value = CACHE_MARKET_CHART, key = "#coinId + ':' + #days + ':' + #vsCurrency")
+    @Cacheable(
+        value = CACHE_MARKET_CHART,
+        key = "#coinId + ':' + #days + ':' + #vsCurrency",
+        unless = "#result == null || (#result.prices().isEmpty() && #result.marketCaps().isEmpty() && #result.totalVolumes().isEmpty())"
+    )
     public MarketChartDto getMarketChart(String coinId, int days, String vsCurrency) {
         String normalizedCurrency = normalizeCurrency(vsCurrency, properties.getMarket().getVsCurrency());
+        String cacheKey = cacheKey(coinId, days, normalizedCurrency);
         try {
             MarketChartResponse response = coinGeckoWebClient.get()
-                .uri(uriBuilder -> uriBuilder
-                    .path("/coins/{id}/market_chart")
-                    .queryParam("vs_currency", normalizedCurrency)
-                    .queryParam("days", days)
-                    .queryParam("interval", days >= 90 ? "daily" : "hourly")
-                    .build(coinId))
+                .uri(uriBuilder -> {
+                    var builder = uriBuilder
+                        .path("/coins/{id}/market_chart")
+                        .queryParam("vs_currency", normalizedCurrency)
+                        .queryParam("days", days);
+                    if (days >= 90) {
+                        builder = builder.queryParam("interval", "daily");
+                    }
+                    return builder.build(coinId);
+                })
                 .retrieve()
                 .bodyToMono(MarketChartResponse.class)
                 .block();
@@ -118,6 +189,15 @@ public class CryptoDataService {
                 mapToPoints(response.totalVolumes())
             );
         } catch (WebClientResponseException ex) {
+            if (ex.getStatusCode().value() == 429) {
+                MarketChartDto fallback = getCachedMarketChart(cacheKey);
+                if (fallback != null) {
+                    log.warn("CoinGecko rate limit hit for chart [{}], serving cached data", cacheKey);
+                    return fallback;
+                }
+                log.warn("CoinGecko rate limit hit for chart [{}], serving empty dataset", cacheKey);
+                return MarketChartDto.empty();
+            }
             throw toExternalApiException("CoinGecko market chart", ex);
         } catch (Exception ex) {
             throw new ExternalApiException("Failed to fetch CoinGecko market chart", ex);
@@ -168,6 +248,30 @@ public class CryptoDataService {
         } catch (Exception ex) {
             throw new ExternalApiException("Failed to fetch CoinGecko simple price", ex);
         }
+    }
+
+    private MarketChartDto getCachedMarketChart(String cacheKey) {
+        Cache cache = cacheManager.getCache(CACHE_MARKET_CHART);
+        if (cache == null) {
+            return null;
+        }
+        return cache.get(cacheKey, MarketChartDto.class);
+    }
+
+    private CoinDetailDto getCachedCoinDetail(String cacheKey) {
+        Cache cache = cacheManager.getCache(CACHE_DETAIL);
+        if (cache == null) {
+            return null;
+        }
+        return cache.get(cacheKey, CoinDetailDto.class);
+    }
+
+    private String cacheKey(String coinId, int days, String vsCurrency) {
+        return coinId + ':' + days + ':' + vsCurrency;
+    }
+
+    private String detailCacheKey(String coinId, String vsCurrency) {
+        return coinId + ':' + vsCurrency;
     }
 
     private CoinDetailDto toCoinDetailDto(CoinDetailResponse response, String currency) {

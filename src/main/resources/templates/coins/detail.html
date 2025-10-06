@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+  <header th:replace="~{fragments/layout :: header}"></header>
+    <main class="container">
+      <section class="coin-detail-header">
+        <div class="coin-detail-title">
+          <h1 th:text="${coin.name}"></h1>
+          <div class="coin-detail-meta">
+            <span th:text="${'#' + #strings.toUpperCase(coin.symbol)}"></span>
+            <span th:text="${'가격 통화: ' + vsCurrency}"></span>
+            <a
+              th:if="${coin.homepage != null && !coin.homepage.isBlank()}"
+              class="button-secondary button-compact"
+              th:href="${coin.homepage}"
+              target="_blank"
+              rel="noopener"
+              >공식 사이트</a
+            >
+          </div>
+        </div>
+        <div class="coin-detail-stats">
+          <div class="stat-card">
+            <div class="stat-label">현재가</div>
+            <div class="stat-value" th:text="${coin.currentPrice == null ? '-' : #numbers.formatDecimal(coin.currentPrice, 0, 'COMMA', 2, 'POINT') + ' ' + vsCurrency}"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">24시간 변동률</div>
+            <div
+              class="stat-value"
+              th:classappend="${coin.priceChangePercentage24h != null && coin.priceChangePercentage24h >= 0} ? ' is-up' : ' is-down'"
+              th:text="${coin.priceChangePercentage24h == null ? '-' : #numbers.formatDecimal(coin.priceChangePercentage24h, 1, 'COMMA', 2, 'POINT') + '%'}"
+            ></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">시가총액</div>
+            <div class="stat-value" th:text="${coin.marketCap == null ? '-' : #numbers.formatDecimal(coin.marketCap, 0, 'COMMA', 0, 'POINT') + ' ' + vsCurrency}"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">24h 고가 / 저가</div>
+            <div class="stat-value">
+              <span th:text="${coin.high24h == null ? '-' : #numbers.formatDecimal(coin.high24h, 0, 'COMMA', 2, 'POINT')}"></span>
+              /
+              <span th:text="${coin.low24h == null ? '-' : #numbers.formatDecimal(coin.low24h, 0, 'COMMA', 2, 'POINT')}"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="coin-chart-section">
+        <div class="chart-header">
+          <h2>가격 차트</h2>
+          <div class="chart-range-selector">
+            <button type="button" data-days="7">7일</button>
+            <button type="button" data-days="30" class="is-active">30일</button>
+            <button type="button" data-days="90">90일</button>
+            <button type="button" data-days="180">180일</button>
+          </div>
+        </div>
+        <div class="chart-wrapper">
+          <div
+            id="tradingviewWidgetContainer"
+            class="tradingview-widget-container"
+            th:if="${tradingViewSymbol != null}"
+          >
+            <div id="tradingviewWidget"></div>
+            <div class="tradingview-widget-copyright">
+              <a
+                th:href="${'https://kr.tradingview.com/symbols/' + #strings.replace(tradingViewSymbol, ':', '-') + '/'}"
+                rel="noopener"
+                target="_blank"
+              >
+                <span>트레이딩뷰 제공</span>
+              </a>
+            </div>
+          </div>
+          <canvas id="coinChart" height="320"></canvas>
+        </div>
+      </section>
+
+      <section class="coin-description" th:if="${coin.description != null && !coin.description.isBlank()}">
+        <h2>코인 소개</h2>
+        <p th:text="${coin.description}"></p>
+      </section>
+    </main>
+  <footer th:replace="~{fragments/layout :: footer}"></footer>
+    <script
+      th:src="@{/js/coin-detail.js}"
+      th:attr="data-chart=${chartData},data-coin-id=${coin.id},data-vs-currency=${vsCurrency},data-default-days=${days},data-tradingview-symbol=${tradingViewSymbol}"
+    ></script>
+  </body>
+</html>
