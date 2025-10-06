@@ -1,74 +1,206 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-  <head th:replace="fragments/layout :: head(${pageTitle})"></head>
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
   <body>
-    <header th:replace="fragments/layout :: header"></header>
-    <main class="container">
-      <section>
-        <h1>암호화폐 커뮤니티 허브</h1>
-        <p class="subtitle">
-          CoinGecko 데이터와 함께하는 실시간 시세, 분석, 커뮤니티 토론을
-          경험해보세요.
-        </p>
+    <header th:replace="~{fragments/layout :: header}"></header>
+    <main class="home-container">
+      <section class="watchlist-panel" th:if="${watchlist != null && !watchlist.empty}">
+        <div class="watchlist-panel__header">
+          <div>
+            <h2>관심 코인 시세</h2>
+            <p th:text="${watchlist.usingDefault ? '기본 추천 코인 목록입니다.' : '내가 설정한 관심 코인입니다.'}"></p>
+          </div>
+          <div class="watchlist-panel__actions">
+            <a
+              th:if="${#authorization.expression('isAuthenticated()')}"
+              class="button-secondary button-compact"
+              th:href="@{/watchlist/manage}"
+            >관심 코인 관리</a>
+            <a
+              th:if="${#authorization.expression('!isAuthenticated()')}"
+              class="button-secondary button-compact"
+              th:href="@{/auth/login(redirect='/watchlist/manage')}"
+            >로그인하고 커스텀하기</a>
+          </div>
+        </div>
+        <div th:replace="~{fragments/watchlist :: table(${watchlist})}"></div>
       </section>
 
-      <section>
-        <div class="section-title">🔥 실시간 시가총액 TOP 코인</div>
-        <div th:if="${#lists.isEmpty(coins)}">
-          잠시 후 다시 시도해주세요. 데이터를 불러오지 못했습니다.
+      <section class="home-hero">
+        <div class="home-hero__content">
+          <p class="home-hero__eyebrow">포트폴리오를 빛내는 올인원 커뮤니티</p>
+          <h1>실시간 시세와 토론이 만나는 코인 허브</h1>
+          <p>
+            코인판에서 영감을 받은 대시보드형 커뮤니티. 실시간 트렌드, 이슈, 댓글을 한 화면에서 확인하고 나만의 인사이트를 공유하세요.
+          </p>
+          <div class="home-hero__actions">
+            <a class="button" th:href="@{/posts/new}">인기글 바로 쓰기</a>
+            <a class="button-secondary" th:href="@{/boards/free}">자유게시판 둘러보기</a>
+          </div>
         </div>
-        <div class="coin-grid" th:if="${!#lists.isEmpty(coins)}">
-          <article class="card" th:each="coin : ${coins}">
-            <div class="coin-header">
-              <img th:src="${coin.image}" th:alt="${coin.name}" />
-              <div>
-                <div th:text="${coin.name}"></div>
-                <small th:text="${#strings.toUpperCase(coin.symbol)}"></small>
-              </div>
+        <div class="home-hero__highlight" th:if="${!#lists.isEmpty(trendingPosts)}">
+          <div class="home-hero__badge">지금 뜨는 글</div>
+          <a
+            th:with="topPost=${trendingPosts.get(0)}"
+            th:href="@{'/posts/' + ${topPost.id}}"
+            class="home-hero__top-post"
+          >
+            <span class="home-hero__board" th:text="${topPost.boardName}"></span>
+            <strong th:text="${topPost.title}"></strong>
+            <div class="home-hero__stats">
+              <span><span class="icon">👀</span><span th:text="${#numbers.formatInteger(topPost.viewCount, 1, 'COMMA')}"></span></span>
+              <span><span class="icon">💬</span><span th:text="${topPost.commentCount}"></span></span>
+              <span><span class="icon">👍</span><span th:text="${topPost.voteScore}"></span></span>
             </div>
-            <div
-              class="coin-price"
-              th:text="${#numbers.formatDecimal(coin.currentPrice, 0, 'COMMA', 2, 'POINT') + ' USD'}"
-            ></div>
-            <div
-              class="coin-change"
+          </a>
+        </div>
+      </section>
+
+      <section class="coin-ticker" th:if="${!#lists.isEmpty(coins)}">
+        <h2>실시간 시가총액 TOP</h2>
+        <div class="coin-ticker__list">
+          <a
+            class="coin-ticker__item"
+            th:each="coin : ${coins}"
+            th:href="@{'/coins/' + ${coin.id}}"
+          >
+            <span class="coin-ticker__name">
+              <img th:src="${coin.image}" th:alt="${coin.name}" />
+              <span th:text="${coin.name}"></span>
+            </span>
+            <span class="coin-ticker__price" th:text="${#numbers.formatDecimal(coin.currentPrice, 0, 'COMMA', 2, 'POINT') + ' USD'}"></span>
+            <span
+              class="coin-ticker__change"
               th:classappend="${coin.priceChangePercentage24h != null && coin.priceChangePercentage24h >= 0} ? ' up' : ' down'"
               th:text="${coin.priceChangePercentage24h == null ? '-' : #numbers.formatDecimal(coin.priceChangePercentage24h, 1, 'COMMA', 2, 'POINT') + '%'}"
-            ></div>
-            <div class="board-meta">
-              24h 거래대금:
-              <span
-                th:text="${coin.totalVolume == null ? '-' : #numbers.formatDecimal(coin.totalVolume, 0, 'COMMA', 0, 'POINT')}"
-              ></span>
-              USD
-            </div>
-          </article>
+            ></span>
+          </a>
         </div>
       </section>
 
-      <section>
-        <div class="section-title">🗂 추천 커뮤니티 게시판</div>
-        <div class="grid" th:if="${!#lists.isEmpty(boards)}">
-          <article class="card board-card" th:each="board : ${boards}">
-            <a
-              th:href="@{'/boards/' + ${board.slug}}"
-              th:text="${board.name}"
-            ></a>
-            <p
-              th:text="${board.description != null ? board.description : '소개 문구가 준비 중입니다.'}"
-            ></p>
+      <div class="home-grid">
+        <section class="home-main">
+          <section class="home-section" th:if="${!#lists.isEmpty(trendingPosts)}">
+            <div class="home-section__header">
+              <h2>🔥 실시간 트렌딩 토픽</h2>
+              <p>24시간 조회수·추천·댓글을 기반으로 계산된 인기 글</p>
+            </div>
+            <div class="home-post-card-grid">
+              <div
+                th:each="post, iterStat : ${trendingPosts}"
+                th:replace="~{home/partials/post-card :: postCard(${post})}"
+              ></div>
+            </div>
+          </section>
+
+          <section class="home-section" th:if="${boardFeeds != null && !boardFeeds.isEmpty()}">
             <div
-              class="board-meta"
-              th:text="${'최초 등록일: ' + #temporals.format(board.createdAt, 'yyyy-MM-dd')}"
-              th:if="${board.createdAt != null}"
-            ></div>
-          </article>
-        </div>
-        <div th:if="${#lists.isEmpty(boards)}">
-          아직 게시판이 없습니다. 관리자가 곧 준비할 예정입니다.
-        </div>
-      </section>
+              class="home-board-feed"
+              th:each="entry : ${boardFeeds.entrySet()}"
+              th:with="boardType=${entry.key}, posts=${entry.value}"
+            >
+              <div class="home-section__header">
+                <h2 th:text="${boardTypeLabels[boardType] != null ? boardTypeLabels[boardType] : #strings.capitalize(boardType.name().toLowerCase())}"></h2>
+                <a
+                  th:if="${boardEntrypoints[boardType] != null}"
+                  th:href="@{'/boards/' + ${boardEntrypoints[boardType].slug}}"
+                  class="home-section__cta"
+                >전체보기</a>
+              </div>
+              <div class="home-post-card-grid">
+                <div
+                  th:each="post : ${posts}"
+                  th:replace="~{home/partials/post-card :: postCard(${post})}"
+                ></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="home-section" th:if="${!#lists.isEmpty(freshPosts)}">
+            <div class="home-section__header">
+              <h2>🆕 방금 올라온 글</h2>
+              <p>따끈한 신규 게시글로 대화에 먼저 참여하세요.</p>
+            </div>
+            <div class="home-post-list">
+              <div
+                class="home-post-list__item"
+                th:each="post : ${freshPosts}"
+              >
+                <a th:href="@{'/posts/' + ${post.id}}" th:text="${post.title}"></a>
+                <div class="home-post-list__meta">
+                  <span th:text="${post.boardName}"></span>
+                  <span>·</span>
+                  <span th:text="${post.authorNickname}"></span>
+                  <span>·</span>
+                  <span th:text="${#temporals.format(post.createdAt, 'MM-dd HH:mm')}"></span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <aside class="home-sidebar">
+          <div class="sidebar-card" th:if="${notices != null && !notices.isEmpty()}">
+            <div class="sidebar-card__header">
+              <h3>📣 커뮤니티 공지</h3>
+              <a class="home-section__cta" th:href="@{/boards/free}">전체보기</a>
+            </div>
+            <ul class="notice-list">
+              <li th:each="notice : ${notices}">
+                <a th:if="${notice.targetUrl != null}" th:href="${notice.targetUrl}" th:text="${notice.title}"></a>
+                <span th:if="${notice.targetUrl == null}" th:text="${notice.title}"></span>
+                <p th:text="${notice.content}"></p>
+                <span class="notice-list__time" th:text="${#temporals.format(notice.publishedAt, 'MM-dd HH:mm')}"></span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="sidebar-card" th:if="${recentComments != null && !recentComments.isEmpty()}">
+            <div class="sidebar-card__header">
+              <h3>💬 실시간 댓글</h3>
+            </div>
+            <div class="recent-comment-list">
+              <div
+                th:each="comment : ${recentComments}"
+                th:replace="~{home/partials/comment-card :: commentCard(${comment})}"
+              ></div>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="sidebar-card__header">
+              <h3>🚀 존비오 포트폴리오 Tip</h3>
+            </div>
+            <ul class="sidebar-card__list">
+              <li>트렌딩과 최근 글을 결합한 메인 허브 구조</li>
+              <li>CoinGecko 실시간 시세 위젯 연동</li>
+              <li>활동 지수를 시각화해 기여도를 강조할 예정</li>
+            </ul>
+          </div>
+
+          <div class="sidebar-card" th:if="${!#lists.isEmpty(boards)}">
+            <div class="sidebar-card__header">
+              <h3>📌 추천 게시판</h3>
+            </div>
+            <div class="sidebar-board-list">
+              <a
+                class="sidebar-board-list__item"
+                th:each="board : ${boards}"
+                th:href="@{'/boards/' + ${board.slug}}"
+              >
+                <span>
+                  <strong th:text="${board.name}"></strong>
+                  <span
+                    th:text="${board.description != null ? board.description : '소개 문구가 준비 중입니다.'}"
+                  ></span>
+                </span>
+                <span class="icon">›</span>
+              </a>
+            </div>
+          </div>
+        </aside>
+      </div>
     </main>
-    <footer th:replace="fragments/layout :: footer"></footer>
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
   </body>
 </html>

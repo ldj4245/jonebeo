@@ -13,6 +13,22 @@
             <a href="/">존버 커뮤니티</a>
             <div class="navbar-tagline">코인 데이터 · 게시판 · 커뮤니티</div>
           </div>
+          <div class="navbar-menu">
+            <a th:href="@{/market}">시장</a>
+            <a th:href="@{/boards/free}">게시판</a>
+            <a
+              th:if="${#authorization.expression('isAuthenticated()')}"
+              class="button button-compact"
+              th:href="@{/posts/new}"
+              >글쓰기</a
+            >
+            <a
+              th:if="${#authorization.expression('!isAuthenticated()')}"
+              class="button button-compact button-secondary"
+              th:href="@{/auth/login(redirect='/posts/new')}"
+              >글쓰기</a
+            >
+          </div>
           <div class="navbar-auth">
             <div th:if="${#authorization.expression('isAuthenticated()')}">
               <a
