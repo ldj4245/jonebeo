@@ -1,0 +1,26 @@
+<div xmlns:th="http://www.thymeleaf.org" th:fragment="commentCard(comment)">
+  <article class="recent-comment-card">
+    <div class="recent-comment-card__header">
+      <span class="recent-comment-card__author" th:text="${comment.authorNickname}"></span>
+      <span class="recent-comment-card__time" th:text="${#temporals.format(comment.createdAt, 'MM-dd HH:mm')}"></span>
+    </div>
+    <a
+      class="recent-comment-card__content"
+      th:href="@{'/posts/' + ${comment.postId}}"
+      th:text="${comment.contentSnippet}"
+    ></a>
+    <div class="recent-comment-card__meta">
+      <a
+        th:if="${comment.boardSlug != null and !comment.boardSlug.isEmpty()}"
+        th:href="@{'/boards/' + ${comment.boardSlug}}"
+        th:text="${comment.boardName}"
+      ></a>
+      <span
+        th:if="${comment.boardSlug == null or comment.boardSlug.isEmpty()}"
+        th:text="${comment.boardName}"
+      ></span>
+      <span class="recent-comment-card__separator">/</span>
+      <a th:href="@{'/posts/' + ${comment.postId}}" th:text="${comment.postTitle}"></a>
+    </div>
+  </article>
+</div>

@@ -1,0 +1,39 @@
+<div xmlns:th="http://www.thymeleaf.org" th:fragment="postCard(post)">
+  <article class="home-post-card">
+    <div class="home-post-card__meta">
+      <a
+        th:if="${post.boardSlug != null and !post.boardSlug.isEmpty()}"
+        th:href="@{'/boards/' + ${post.boardSlug}}"
+        th:text="${post.boardName}"
+        class="home-post-card__board"
+      ></a>
+      <span
+        th:if="${post.boardSlug == null or post.boardSlug.isEmpty()}"
+        th:text="${post.boardName}"
+        class="home-post-card__board"
+      ></span>
+      <span class="home-post-card__separator">•</span>
+      <span class="home-post-card__author" th:text="${post.authorNickname}"></span>
+    </div>
+    <a
+      class="home-post-card__title"
+      th:href="@{'/posts/' + ${post.id}}"
+      th:text="${post.title}"
+    ></a>
+    <div class="home-post-card__stats">
+      <span>
+        <span class="icon">👀</span>
+        <span th:text="${#numbers.formatInteger(post.viewCount, 1, 'COMMA')}"></span>
+      </span>
+      <span>
+        <span class="icon">💬</span>
+        <span th:text="${post.commentCount}"></span>
+      </span>
+      <span th:classappend="${post.voteScore >= 0} ? ' up' : ' down'">
+        <span class="icon">👍</span>
+        <span th:text="${post.voteScore}"></span>
+      </span>
+      <span class="home-post-card__time" th:text="${#temporals.format(post.createdAt, 'MM-dd HH:mm')}"></span>
+    </div>
+  </article>
+</div>
