@@ -50,7 +50,7 @@ public class Vote extends BaseEntity {
     @Column(name = "target_type", nullable = false, length = 20)
     private VoteTargetType targetType;
 
-    @Column(nullable = false)
+    @Column(name = "vote_value", nullable = false)
     private int value;
 
     public void updateValue(int value) {
