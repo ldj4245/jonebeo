@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-  <head th:replace="fragments/layout :: head(${pageTitle})"></head>
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
   <body>
-    <header th:replace="fragments/layout :: header"></header>
+    <header th:replace="~{fragments/layout :: header}"></header>
     <main class="container">
       <section class="form-card">
         <h1 th:text="${pageTitle}">게시글 작성</h1>
@@ -21,7 +21,7 @@
           <div>
             <label for="boardId">게시판</label>
             <select id="boardId" th:field="*{boardId}" required>
-              <option value="" disabled th:selected="${*{boardId} == null}">
+              <option value="" disabled th:selected="${postForm.boardId} == null">
                 게시판을 선택하세요
               </option>
               <option
@@ -59,12 +59,12 @@
             <button
               type="submit"
               class="button"
-              th:text="${postId != null} ? '수정 완료' : '작성 완료'}"
+              th:text="${postId != null} ? '수정 완료' : '작성 완료'"
             ></button>
           </div>
         </form>
       </section>
     </main>
-    <footer th:replace="fragments/layout :: footer"></footer>
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
   </body>
 </html>

@@ -8,6 +8,8 @@ public record PostResponse(
     String title,
     String content,
     long viewCount,
+    long bookmarkCount,
+    boolean bookmarked,
     Instant createdAt,
     Instant updatedAt,
     BoardResponse board,

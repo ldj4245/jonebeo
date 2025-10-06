@@ -5,6 +5,7 @@ import com.johnbeo.johnbeo.common.response.PageResponse;
 import com.johnbeo.johnbeo.domain.board.dto.BoardResponse;
 import com.johnbeo.johnbeo.domain.board.entity.Board;
 import com.johnbeo.johnbeo.domain.board.repository.BoardRepository;
+import com.johnbeo.johnbeo.domain.bookmark.service.BookmarkService;
 import com.johnbeo.johnbeo.domain.member.entity.Member;
 import com.johnbeo.johnbeo.domain.member.repository.MemberRepository;
 import com.johnbeo.johnbeo.domain.post.dto.CreatePostRequest;
@@ -14,6 +15,7 @@ import com.johnbeo.johnbeo.domain.post.dto.PostSummaryResponse;
 import com.johnbeo.johnbeo.domain.post.dto.UpdatePostRequest;
 import com.johnbeo.johnbeo.domain.post.entity.Post;
 import com.johnbeo.johnbeo.domain.post.repository.PostRepository;
+import com.johnbeo.johnbeo.domain.post.service.support.PostViewTracker;
 import com.johnbeo.johnbeo.security.model.MemberPrincipal;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,8 @@ public class PostService {
     private final PostRepository postRepository;
     private final BoardRepository boardRepository;
     private final MemberRepository memberRepository;
+    private final BookmarkService bookmarkService;
+    private final PostViewTracker postViewTracker;
 
     public PageResponse<PostSummaryResponse> getAllPosts(Pageable pageable) {
         Page<Post> page = postRepository.findAll(pageable);
@@ -45,15 +49,17 @@ public class PostService {
     }
 
     public PostResponse getPost(Long id) {
-        Post post = findPost(id);
-        return toPostResponse(post);
+    Post post = findPost(id);
+    return toPostResponse(post, null);
     }
 
     @Transactional
-    public PostResponse readPost(Long id) {
+    public PostResponse readPost(Long id, MemberPrincipal principal) {
         Post post = findPost(id);
-        post.incrementViewCount();
-        return toPostResponse(post);
+        if (postViewTracker.shouldCountView(post.getId(), principal)) {
+            post.incrementViewCount();
+        }
+        return toPostResponse(post, principal);
     }
 
     @Transactional
@@ -69,16 +75,16 @@ public class PostService {
             .content(request.content())
             .build();
 
-        Post saved = postRepository.save(post);
-        return toPostResponse(saved);
+    Post saved = postRepository.save(post);
+    return toPostResponse(saved, principal);
     }
 
     @Transactional
     public PostResponse updatePost(Long id, UpdatePostRequest request, MemberPrincipal principal) {
         Post post = findPost(id);
         validateOwnership(post, principal);
-        post.updateContent(request.title(), request.content());
-        return toPostResponse(post);
+    post.updateContent(request.title(), request.content());
+    return toPostResponse(post, principal);
     }
 
     @Transactional
@@ -108,16 +114,26 @@ public class PostService {
         }
     }
 
-    private PostResponse toPostResponse(Post post) {
+    private PostResponse toPostResponse(Post post, MemberPrincipal principal) {
+        long bookmarkCount = bookmarkService.countByPost(post.getId());
+        boolean bookmarked = principal != null && bookmarkService.isBookmarked(principal.getId(), post.getId());
+
+        var board = post.getBoard() != null ? toBoardResponse(post.getBoard()) : null;
+        var author = post.getAuthor() != null
+            ? toPostAuthor(post.getAuthor())
+            : new PostAuthorDto(null, "알 수 없는 작성자");
+
         return new PostResponse(
             post.getId(),
             post.getTitle(),
             post.getContent(),
             post.getViewCount(),
+            bookmarkCount,
+            bookmarked,
             post.getCreatedAt(),
             post.getUpdatedAt(),
-            toBoardResponse(post.getBoard()),
-            toPostAuthor(post.getAuthor())
+            board,
+            author
         );
     }
 

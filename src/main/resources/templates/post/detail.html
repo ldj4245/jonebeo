@@ -1,13 +1,28 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-  <head th:replace="fragments/layout :: head(${pageTitle})"></head>
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
   <body>
-    <header th:replace="fragments/layout :: header"></header>
+    <header th:replace="~{fragments/layout :: header}"></header>
     <main class="container">
+      <div
+        class="flash-info"
+        th:if="${postMessage != null}"
+        th:text="${postMessage}"
+      ></div>
+      <div
+        class="flash-error"
+        th:if="${postError != null}"
+        th:text="${postError}"
+      ></div>
       <div
         class="flash-error"
         th:if="${voteError != null}"
         th:text="${voteError}"
+      ></div>
+      <div
+        class="flash-error"
+        th:if="${bookmarkError != null}"
+        th:text="${bookmarkError}"
       ></div>
 
       <section class="post-page-header">
@@ -59,6 +74,36 @@
               </a>
             </div>
           </div>
+          <div class="post-bookmark-panel">
+            <div class="bookmark-count" th:text="${'북마크 ' + post.bookmarkCount}">
+              북마크 0
+            </div>
+            <div th:if="${isAuthenticated}" class="bookmark-actions">
+              <form
+                th:if="${!post.bookmarked}"
+                th:action="@{'/bookmarks/posts/' + ${post.id}}"
+                method="post"
+              >
+                <button type="submit" class="button-secondary button-compact">
+                  북마크하기
+                </button>
+              </form>
+              <form
+                th:if="${post.bookmarked}"
+                th:action="@{'/bookmarks/posts/' + ${post.id} + '/remove'}"
+                method="post"
+              >
+                <button type="submit" class="button-secondary button-compact is-active">
+                  북마크 해제
+                </button>
+              </form>
+            </div>
+            <div class="bookmark-guest" th:if="${!isAuthenticated}">
+              <a class="button-secondary button-compact" th:href="@{/auth/login}">
+                로그인 후 북마크
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -67,15 +112,25 @@
       </article>
 
       <div class="post-footer">
-        <a th:href="@{'/boards/' + ${post.board.slug}}"
+        <a
+          th:if="${post.board != null}"
+          th:href="@{'/boards/' + ${post.board.slug}}"
           >← 게시판으로 돌아가기</a
         >
+        <span th:if="${post.board == null}">게시판 정보가 없습니다.</span>
         <a
           class="button"
           th:href="@{'/posts/' + ${post.id} + '/edit'}"
           th:if="${currentUserId != null && currentUserId == post.author.id}"
           >게시글 수정</a
         >
+        <form
+          th:if="${currentUserId != null && currentUserId == post.author.id}"
+          th:action="@{'/posts/' + ${post.id} + '/delete'}"
+          method="post"
+        >
+          <button type="submit" class="button-secondary">게시글 삭제</button>
+        </form>
       </div>
 
       <section id="comments" class="comment-section">
@@ -116,7 +171,7 @@
         </div>
       </section>
     </main>
-    <footer th:replace="fragments/layout :: footer"></footer>
+  <footer th:replace="~{fragments/layout :: footer}"></footer>
 
     <th:block th:fragment="commentFragment(comment, depth)">
       <article
@@ -188,6 +243,22 @@
             <input type="hidden" name="postId" th:value="${post.id}" />
             <button type="submit" class="button-secondary">삭제</button>
           </form>
+          <details
+            th:if="${currentUserId != null && currentUserId == comment.author.id}"
+            class="comment-edit"
+          >
+            <summary>수정</summary>
+            <form
+              th:action="@{'/comments/' + ${comment.id} + '/edit'}"
+              method="post"
+            >
+              <input type="hidden" name="postId" th:value="${post.id}" />
+              <textarea name="content" required th:text="${comment.content}"></textarea>
+              <div class="form-actions">
+                <button type="submit" class="button">수정 완료</button>
+              </div>
+            </form>
+          </details>
         </div>
         <div class="reply-form" th:if="${isAuthenticated}">
           <form th:action="@{'/comments/post/' + ${post.id}}" method="post">

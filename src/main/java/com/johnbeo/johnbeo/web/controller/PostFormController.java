@@ -103,6 +103,35 @@ public class PostFormController {
         return "redirect:/posts/" + id;
     }
 
+    @PostMapping("/{id}/delete")
+    @PreAuthorize("isAuthenticated()")
+    public String deletePost(
+        @PathVariable Long id,
+        @AuthenticationPrincipal MemberPrincipal principal,
+        RedirectAttributes attributes
+    ) {
+        PostResponse post;
+        try {
+            post = postService.getPost(id);
+        } catch (Exception ex) {
+            attributes.addFlashAttribute("postError", ex.getMessage());
+            return "redirect:/";
+        }
+
+        String redirectTarget = post.board() != null && post.board().slug() != null
+            ? "/boards/" + post.board().slug()
+            : "/";
+
+        try {
+            postService.deletePost(id, principal);
+            attributes.addFlashAttribute("postMessage", "게시글이 삭제되었습니다.");
+            return "redirect:" + redirectTarget;
+        } catch (AccessDeniedException ex) {
+            attributes.addFlashAttribute("postError", ex.getMessage());
+        }
+        return "redirect:/posts/" + id;
+    }
+
     public record PostForm(
         @NotNull Long boardId,
         @NotBlank @Size(min = 3, max = 150) String title,

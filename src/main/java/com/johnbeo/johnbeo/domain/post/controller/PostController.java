@@ -45,8 +45,8 @@ public class PostController {
     }
 
     @GetMapping("/{id}")
-    public PostResponse getPost(@PathVariable Long id) {
-        return postService.readPost(id);
+    public PostResponse getPost(@PathVariable Long id, @AuthenticationPrincipal MemberPrincipal principal) {
+        return postService.readPost(id, principal);
     }
 
     @PostMapping

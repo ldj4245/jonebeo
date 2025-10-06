@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-  <head th:replace="fragments/layout :: head(${pageTitle})"></head>
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
   <body>
-    <header th:replace="fragments/layout :: header"></header>
+    <header th:replace="~{fragments/layout :: header}"></header>
     <main class="container">
       <section class="board-header">
         <h1 th:text="${board.name}"></h1>
@@ -16,14 +16,26 @@
             th:text="${' · 생성일: ' + #temporals.format(board.createdAt, 'yyyy-MM-dd')}"
           ></span>
         </div>
-        <div
-          class="board-actions board-actions--center"
-          th:if="${isAuthenticated}"
-        >
-          <a class="button" th:href="@{/posts/new(boardId=${board.id})}"
+        <div class="board-actions board-actions--center">
+          <a
+            class="button"
+            th:if="${isAuthenticated}"
+            th:href="@{/posts/new(boardId=${board.id})}"
+            >글쓰기</a
+          >
+          <a
+            class="button button-secondary"
+            th:if="${!isAuthenticated}"
+            th:href="@{/auth/login(redirect=${'/posts/new?boardId=' + board.id})}"
             >글쓰기</a
           >
         </div>
+        <p
+          class="board-login-hint"
+          th:if="${!isAuthenticated}"
+        >
+          글쓰기를 하려면 먼저 로그인해주세요.
+        </p>
       </section>
 
       <section th:if="${!#lists.isEmpty(posts.content)}">
@@ -68,13 +80,28 @@
 
       <section class="empty-state" th:if="${#lists.isEmpty(posts.content)}">
         <p>아직 작성된 게시글이 없습니다. 첫 번째 글을 작성해보세요!</p>
-        <div class="board-actions" th:if="${isAuthenticated}">
-          <a class="button" th:href="@{/posts/new(boardId=${board.id})}"
+        <div class="board-actions">
+          <a
+            class="button"
+            th:if="${isAuthenticated}"
+            th:href="@{/posts/new(boardId=${board.id})}"
+            >글쓰기</a
+          >
+          <a
+            class="button button-secondary"
+            th:if="${!isAuthenticated}"
+            th:href="@{/auth/login(redirect=${'/posts/new?boardId=' + board.id})}"
             >글쓰기</a
           >
         </div>
+        <p
+          class="board-login-hint"
+          th:if="${!isAuthenticated}"
+        >
+          로그인하면 첫 번째 글의 주인공이 될 수 있어요!
+        </p>
       </section>
     </main>
-    <footer th:replace="fragments/layout :: footer"></footer>
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
   </body>
 </html>
