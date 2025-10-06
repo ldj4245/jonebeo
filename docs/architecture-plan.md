@@ -51,11 +51,23 @@
   - 세션: `STATELESS`
   - CSRF: REST API에는 비활성, Thymeleaf 폼에는 활성화(필요 시)
   - 화이트리스트: `/auth/**`, `/login`, `/register`, `/api/public/**`
+
+### 2.3 사용자 맞춤 관심코인 시세판
+
+- **WatchlistService**
+  - 게스트: `watchlist.defaults` 설정 기반 기본 코인 목록 제공.
+  - 로그인 사용자: `watchlist_entries` 테이블에서 코인 ID·라벨·정렬 순서를 불러와 개인화.
+  - CoinGecko `/coins/markets` 엔드포인트를 USD·KRW 2회 호출하여 가격/변동률/거래대금을 병합.
+  - 캐시 키는 `coins.marketByIds`에 통합, 환율(`watchlist.usd-to-krw-rate`)을 활용해 프리미엄(%) 계산.
+- **관리 기능**
+  - `/watchlist/manage` 화면에서 CoinGecko ID 기반 추가/삭제, 최대 20개 제한.
+  - `WatchlistEntryRepository`가 `(member_id, coin_id)` 유니크 제약, `display_order`로 정렬 유지.
   - 권한 분기: 게시물 쓰기/댓글은 `ROLE_USER`, 관리자 기능은 `ROLE_ADMIN`
   - 예외 처리: `AuthenticationEntryPoint`, `AccessDeniedHandler` 구현
 
 ### 1.3 핵심 데이터베이스 스키마 및 관계
 
+| WatchlistEntry                 | id, coinId, label, displayOrder                                     | Member N:1                                  | 관심 코인 시세판   |
 | 엔티티                         | 필드                                                                | 관계                                        | 설명               |
 | ------------------------------ | ------------------------------------------------------------------- | ------------------------------------------- | ------------------ |
 | Member                         | id, username, password, email, nickname, role, createdAt, updatedAt | Post/Comment/Vote/Bookmark 1:N              | 사용자             |
@@ -66,8 +78,10 @@
 | Bookmark                       | id, createdAt                                                       | Member/Post N:1, (member+post) unique       | 즐겨찾기           |
 | CalendarEvent                  | id, title, eventDate, description, sourceUrl                        | Board 혹은 별도                             | 일정               |
 | NewsPost/EventPost/AirdropPost | Post 상속                                                           |                                             | 게시판 유형별 확장 |
+| `watchlist/manage.html`       | 관심 코인 목록 관리(추가/삭제, 미리보기)                     |
 
 - **상속 전략**: `@Inheritance(strategy = JOINED)` 권장 (정규화 & 확장성)
+- 공통 프래그먼트에 `fragments/watchlist.html`을 추가하여 홈/관리 화면 모두에서 시세 테이블 UI를 재사용한다.
 - **마이그레이션 예시**: `V1__create_member_board_post.sql`
 - **인덱스 설계**: `Member(username/email/nickname)`, `Post(board_id, created_at DESC)`, `Vote(member_id, target_id, target_type)` 유니크
 
@@ -103,7 +117,7 @@
   - `/api/coins/{id}/market-chart`
   - `/api/simple-prices`
 
-### 2.3 캐싱 전략
+### 2.4 캐싱 전략
 
 - **기술**: Spring Cache + Caffeine (`expireAfterWrite`, `maximumSize`, `recordStats`)
 - **적용 예**
@@ -168,24 +182,62 @@
   - 1차: Spring Data `findByTitleContaining` + 인덱스
   - 2차: ElasticSearch/OpenSearch 연동 검토
 
+### 3.4 코인판 벤치마크 핵심 기능 맵
+
+| 영역                    | 코인판 기준 UX                                                                      | 존비오 개선 방향                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| 메인 히어로             | 상단 티커 + 고정 배너 + 이벤트 링크                                                 | 코인 가격 티커 + 주간 핫토픽 배너(관리자 등록) + 포트폴리오 CTA                                                |
+| 멀티 게시판 피드        | 자유/정보/이슈/인기글을 한 화면에서 카드 레이아웃으로 스위칭                        | "지금 뜨는 글", "핫토픽", "실시간 댓글" 3단 컬럼 카드 → PostService 최신/조회수/댓글 기반 aggregate           |
+| 실시간 인기 랭킹        | 조회수/추천수 Top 리스트                                                              | `TrendingPostService` (24시간 윈도우) → Redis/Caffeine 캐시, 썸네일/댓글수 표시                                 |
+| 사이드바 위젯           | 코인 시세, 커뮤니티 공지, 광고 배너                                                  | CoinGecko 시세/변동률 위젯 + 운영자가 등록하는 `Notice`/`Promo` 엔티티 + 추후 광고 슬롯                        |
+| 캘린더·이벤트           | 에어드롭/상장 이벤트 캘린더                                                          | `CalendarEvent` 게시판 기본 제공, 메인에서 다가오는 이벤트 3건 노출                                            |
+| 등급/랭크 시스템        | 활동 포인트에 따른 단계                                                              | `MemberTier` 계산기(글/댓글/추천 가중치) + 프로필 뱃지, 포트폴리오용 통계 대시보드                             |
+| 푸시 & 알림             | 댓글/추천/멘션 알림                                                                  | 1차: 알림센터 UI + 폴링 API, 2차: SSE/WebSocket 확장                                                           |
+| 관리자 운영 도구        | 배너 교체, 공지, 게시판 관리                                                         | `/admin` 콘솔에 배너/공지 CRUD, 게시판 가중치 설정, 사용자 제재 관리                                           |
+
+- **서비스 책임 정리**
+  - `TrendingPostService`: 최근 24시간/7일 인기글 계산 (조회수·추천·댓글수 가중치), 배치 or on-demand + 캐시
+  - `FeedAggregationService`: 게시판 별 최신 글 + 댓글 많은 글 묶음 제공, 메인 페이지 & 사이드 위젯 공급
+  - `NoticeService` & `PromoBannerService`: 운영 공지, 배너, 이벤트 영역 데이터 관리
+  - `MemberTierService`: 활동 지수 계산 → 프로필/사이드바 뱃지, 추후 랭킹 페이지 제공
+  - `CalendarEventService`: 일정/에어드롭 데이터 CRUD + Soon(다가오는 일정) 조회 API
+
+- **데이터 모델 보강**
+  - `Notice`(title, content, priority, publishedAt, targetUrl)
+  - `PromoBanner`(title, coverImageUrl, targetUrl, startAt, endAt, displayPosition)
+  - `TrendingMetric`(postId, period, score, calculatedAt)
+  - `MemberActivity`(memberId, postCount, commentCount, voteReceived, tier)
+  - `CalendarEvent` 확장 필드: `category`, `reward`, `projectLogoUrl`
+
+- **알고리즘 가이드**
+  - Trend Score = `viewWeight * log(view+1) + voteWeight * voteScore + commentWeight * commentCount`
+  - 24h/7d 구간 집계, 새 포스트 >= 기준점수 없으면 자동 보정 (age 를 감쇠 factor 로 사용)
+  - 캐시 히트율 목표 90% 이상, 캐시 만료 60초, 새 글 발생 시 해당 게시판 키만 무효화
+
+- **UX 기대효과**
+  - 접속 직후 다양한 게시판 온보딩
+  - 활동량이 높은 사용자/게시물에 대한 즉각적인 가시성
+  - 운영자 편집/광고 공간 확보 → 포트폴리오에서 제품 기획/운영 역량 강조
+
 ---
 
 ## 4. 사용자 인터페이스 및 경험(Thymeleaf)
 
 ### 4.1 페이지 구조 및 레이아웃
 
-| 템플릿                        | 설명                                |
-| ----------------------------- | ----------------------------------- |
-| `home.html`                   | 트렌딩 게시물 + 주요 코인 스냅샷    |
-| `market.html`                 | 상위 100개 코인 테이블              |
-| `coins/detail.html`           | 코인 상세 정보 + 차트               |
-| `boards/list.html`            | 게시판 목록                         |
-| `posts/list.html`             | 게시판 내 게시물 목록(페이지네이션) |
-| `posts/view.html`             | 게시물 상세 + 댓글 + 투표 + 북마크  |
-| `posts/form.html`             | 작성/수정 폼                        |
-| `login.html`, `register.html` | 인증 페이지                         |
-| `profile.html`                | 사용자 정보, 내가 쓴 글, 북마크     |
-| `admin/*.html`                | 관리자 대시보드                     |
+| 템플릿                        | 설명                                                          |
+| ----------------------------- | ------------------------------------------------------------- |
+| `index.html`                  | 메인 허브: 히어로 배너, 트렌딩, 실시간 댓글, 코인 위젯, 공지 |
+| `home/partials/*.html`        | 메인 페이지 카드 프래그먼트, 사이드 위젯                     |
+| `market.html`                 | 상위 100개 코인 테이블                                        |
+| `coins/detail.html`           | 코인 상세 정보 + 차트                                         |
+| `boards/list.html`            | 게시판 목록                                                   |
+| `boards/detail.html`          | 게시판 내 게시물 목록(페이지네이션)                          |
+| `posts/detail.html`           | 게시물 상세 + 댓글 + 투표 + 북마크                            |
+| `posts/form.html`             | 작성/수정 폼                                                  |
+| `login.html`, `register.html` | 인증 페이지                                                   |
+| `profile.html`                | 사용자 정보, 내가 쓴 글, 북마크, 활동 지수                   |
+| `admin/*.html`                | 관리자 대시보드 + 배너/공지 관리                              |
 
 - **프래그먼트**: `fragments/header.html`, `fragments/footer.html`, `fragments/sidebar.html`
 - **폼 처리**: `th:field`, `th:errors`, CSRF 토큰 자동 포함
@@ -213,12 +265,13 @@
 
 ### 5.1 단계별 개발 로드맵
 
-| 단계                            | 목표                       | 주요 기능                                                                                                         |
-| ------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| 1단계 (MVP, 4~6주)              | 배포 가능한 기본 기능 완성 | 프로젝트 부트스트랩, JWT 인증/인가, 자유게시판 CRUD, CoinGecko 상위 20개 목록 + 캐싱, 기본 템플릿, Docker/CI 초안 |
-| 2단계 (핵심 커뮤니티, 3~4주)    | 사용자 상호작용 강화       | 댓글, 다중 게시판, 투표/북마크, 프로필, 관리자 기초, OpenAPI 문서, 테스트 확장                                    |
-| 3단계 (데이터 통합 & UX, 3~4주) | 데이터 기반 기능 고도화    | 차트 렌더, 게시물 상속 구조, 뉴스/일정 게시판, AJAX UX, 캐시 모니터링                                             |
-| 4단계 (완성도 & 운영, 4주~)     | 운영 안정화 및 쇼케이스    | 뉴스 자동 수집, 관리자 패널 확장, 보안 강화, CI/CD 고도화, 클라우드 배포(HTTPS), README/블로그/데모 영상          |
+| 단계                            | 목표                       | 주요 기능                                                                                                                                |
+| ------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 1단계 (MVP, 4~6주)              | 배포 가능한 기본 기능 완성 | 프로젝트 부트스트랩, JWT 인증/인가, 자유게시판 CRUD, CoinGecko 상위 20개 목록 + 캐싱, 기본 템플릿, Docker/CI 초안                          |
+| 2단계 (핵심 커뮤니티, 3~4주)    | 사용자 상호작용 강화       | 댓글, 다중 게시판, 투표/북마크, 프로필, 관리자 기초, OpenAPI 문서, 테스트 확장                                                           |
+| 3단계 (데이터 통합 & UX, 3~4주) | 데이터 기반 기능 고도화    | 차트 렌더, 게시물 상속 구조, 뉴스/일정 게시판, AJAX UX, 캐시 모니터링                                                                    |
+| 4단계 (코인판 수준 허브, 4~6주) | 메인 허브 및 트렌딩 강화   | Trending/Feed Aggregation 서비스, 메인 대시보드, 티커/배너, 활동 지수, 공지/배너 관리, 사이드 위젯, 관리자 퍼블리싱 툴                     |
+| 5단계 (완성도 & 운영, 4주~)     | 운영 안정화 및 쇼케이스    | 뉴스 자동 수집, 관리자 패널 확장, 보안 강화, CI/CD 고도화, 클라우드 배포(HTTPS), README/블로그/데모 영상, 실시간 알림(SSE/WebSocket) 고도화 |
 
 ### 5.2 포트폴리오 쇼케이스 전략
 

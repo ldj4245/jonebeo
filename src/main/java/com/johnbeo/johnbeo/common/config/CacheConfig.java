@@ -1,5 +1,6 @@
 package com.johnbeo.johnbeo.common.config;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
 import org.springframework.cache.CacheManager;
@@ -17,5 +18,13 @@ public class CacheConfig {
             .expireAfterWrite(Duration.ofSeconds(60))
             .maximumSize(1_000));
         return cacheManager;
+    }
+
+    @Bean
+    public Cache<String, Boolean> postViewCache() {
+        return Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(30))
+            .maximumSize(10_000)
+            .build();
     }
 }

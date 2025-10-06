@@ -26,3 +26,35 @@ coingecko:
     per-page: 100
   simple-price:
     vs-currency: usd
+
+tradingview:
+  enabled: true
+  default-exchange: BINANCE
+  default-quote: USDT
+  use-default-mapping: true
+  symbols:
+    bitcoin: BINANCE:BTCUSDT
+    ethereum: BINANCE:ETHUSDT
+    ripple: BINANCE:XRPUSDT
+
+watchlist:
+  usd-to-krw-rate: 1350
+  defaults:
+    - coin-id: bitcoin
+      label: 비트코인
+    - coin-id: ethereum
+      label: 이더리움
+    - coin-id: ethereum-classic
+      label: 이더리움클래식
+    - coin-id: ripple
+      label: 리플
+    - coin-id: tron
+      label: 트론
+    - coin-id: bitcoin-cash
+      label: 비트코인캐시
+    - coin-id: cardano
+      label: 에이다
+    - coin-id: solana
+      label: 솔라나
+    - coin-id: dogecoin
+      label: 도지코인
