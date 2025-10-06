@@ -2,6 +2,8 @@ package com.johnbeo.johnbeo.auth.controller;
 
 import com.johnbeo.johnbeo.auth.dto.AuthResponse;
 import com.johnbeo.johnbeo.auth.dto.LoginRequest;
+import com.johnbeo.johnbeo.auth.dto.LogoutRequest;
+import com.johnbeo.johnbeo.auth.dto.RefreshTokenRequest;
 import com.johnbeo.johnbeo.auth.dto.RegisterRequest;
 import com.johnbeo.johnbeo.auth.service.AuthService;
 import com.johnbeo.johnbeo.common.response.ApiResponse;
@@ -9,10 +11,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.johnbeo.johnbeo.security.model.MemberPrincipal;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,5 +36,18 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        AuthResponse response = authService.refreshToken(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse> logout(@AuthenticationPrincipal MemberPrincipal principal,
+                                              @RequestBody(required = false) LogoutRequest request) {
+        authService.logout(principal, request);
+        return ResponseEntity.ok(new ApiResponse(true, "로그아웃되었습니다."));
     }
 }

@@ -15,7 +15,6 @@ import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -45,9 +44,9 @@ public class JwtTokenProvider {
     }
 
     public Authentication getAuthentication(String token) {
-    Long memberId = Long.parseLong(parseClaims(token).getBody().getSubject());
-    MemberPrincipal principal = userDetailsService.loadUserById(memberId);
-    return new UsernamePasswordAuthenticationToken(principal, "", principal.getAuthorities());
+        Long memberId = Long.parseLong(parseClaims(token).getBody().getSubject());
+        MemberPrincipal principal = userDetailsService.loadUserById(memberId);
+        return new UsernamePasswordAuthenticationToken(principal, "", principal.getAuthorities());
     }
 
     public boolean validateToken(String token) {
@@ -57,6 +56,14 @@ public class JwtTokenProvider {
 
     public long getAccessTokenTtl() {
         return jwtProperties.accessTokenExpiration();
+    }
+
+    public Long getMemberId(String token) {
+        return Long.parseLong(parseClaims(token).getBody().getSubject());
+    }
+
+    public Instant getExpiration(String token) {
+        return parseClaims(token).getBody().getExpiration().toInstant();
     }
 
     private String buildToken(MemberPrincipal principal, Date issuedAt, Date expiration) {

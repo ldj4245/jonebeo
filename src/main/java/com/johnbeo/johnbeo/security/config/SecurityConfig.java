@@ -49,6 +49,7 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/auth/logout").permitAll()
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/posts/**", "/api/boards/**", "/api/coins/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/market", "/coins/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/posts/**", "/boards/**").permitAll()
                 .anyRequest().authenticated())
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))

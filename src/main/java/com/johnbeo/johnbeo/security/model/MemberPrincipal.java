@@ -20,9 +20,16 @@ public class MemberPrincipal implements UserDetails {
     private final String username;
     private final String password;
     private final Role role;
+    private final String nickname;
 
     public static MemberPrincipal from(Member member) {
-        return new MemberPrincipal(member.getId(), member.getUsername(), member.getPassword(), member.getRole());
+        return new MemberPrincipal(
+            member.getId(),
+            member.getUsername(),
+            member.getPassword(),
+            member.getRole(),
+            member.getNickname()
+        );
     }
 
     @Override
