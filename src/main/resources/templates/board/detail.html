@@ -1,105 +1,277 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-  <head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}" />
+  </head>
   <body>
     <header th:replace="~{fragments/layout :: header}"></header>
-    <main class="container">
-      <section class="board-header">
-        <h1 th:text="${board.name}"></h1>
-        <p
-          th:text="${board.description != null ? board.description : '소개 문구가 준비 중입니다.'}"
-        ></p>
-        <div class="board-meta">
-          <span th:text="${'슬러그: ' + board.slug}"></span>
-          <span
-            th:if="${board.createdAt != null}"
-            th:text="${' · 생성일: ' + #temporals.format(board.createdAt, 'yyyy-MM-dd')}"
-          ></span>
-        </div>
-        <div class="board-actions board-actions--center">
-          <a
-            class="button"
-            th:if="${isAuthenticated}"
-            th:href="@{/posts/new(boardId=${board.id})}"
-            >글쓰기</a
-          >
-          <a
-            class="button button-secondary"
-            th:if="${!isAuthenticated}"
-            th:href="@{/auth/login(redirect=${'/posts/new?boardId=' + board.id})}"
-            >글쓰기</a
-          >
-        </div>
-        <p
-          class="board-login-hint"
-          th:if="${!isAuthenticated}"
-        >
-          글쓰기를 하려면 먼저 로그인해주세요.
-        </p>
-      </section>
-
-      <section th:if="${!#lists.isEmpty(posts.content)}">
-        <div class="post-list">
-          <article class="post-card" th:each="post : ${posts.content}">
-            <div>
-              <a
-                class="post-title"
-                th:href="@{'/posts/' + ${post.id}}"
-                th:text="${post.title}"
-              ></a>
-              <div class="post-meta">
-                <span th:text="${post.author.nickname}"></span>
-                <span> · </span>
-                <span
-                  th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"
-                ></span>
+    <main class="container board-container">
+      <!-- Board Header -->
+      <section class="board-hero">
+        <div class="board-hero-content">
+          <div class="board-hero-text">
+            <div class="board-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              <span th:text="${board.slug}"></span>
+            </div>
+            <h1 class="board-title" th:text="${board.name}"></h1>
+            <p class="board-description" th:text="${board.description != null ? board.description : '소개 문구가 준비 중입니다.'}"></p>
+            <div class="board-stats">
+              <div class="board-stat">
+                <span class="board-stat-value" th:text="${posts != null ? posts.totalElements : 0}"></span>
+                <span class="board-stat-label">게시글</span>
+              </div>
+              <div class="board-stat">
+                <span class="board-stat-value" th:text="${board.createdAt != null ? #temporals.format(board.createdAt, 'yyyy-MM-dd') : 'N/A'}"></span>
+                <span class="board-stat-label">생성일</span>
               </div>
             </div>
-            <div class="post-stats">
-              <span th:text="${'조회 ' + post.viewCount}"></span>
+          </div>
+          <div class="board-hero-actions">
+            <a
+              th:if="${isAuthenticated}"
+              class="btn btn--primary btn--lg"
+              th:href="@{/posts/new(boardId=${board.id})}"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              새 글 작성
+            </a>
+            <a
+              th:if="${!isAuthenticated}"
+              class="btn btn--secondary btn--lg"
+              th:href="@{/auth/login(redirect=${'/posts/new?boardId=' + board.id})}"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                <polyline points="10,17 15,12 10,7"></polyline>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+              </svg>
+              로그인 후 글쓰기
+            </a>
+            <div class="board-login-hint" th:if="${!isAuthenticated}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12,6 12,12 16,14"></polyline>
+              </svg>
+              <span>로그인하면 글을 작성할 수 있습니다</span>
             </div>
-          </article>
-        </div>
-
-        <div class="pagination">
-          <a
-            th:if="${posts.page > 0}"
-            th:href="@{'/boards/' + ${board.slug} + '?page=' + (${posts.page} - 1)}"
-            >이전</a
-          >
-          <span
-            th:text="${posts.totalPages > 0 ? (posts.page + 1) + ' / ' + posts.totalPages : '1 / 1'}"
-          ></span>
-          <a
-            th:if="${posts.hasNext}"
-            th:href="@{'/boards/' + ${board.slug} + '?page=' + (${posts.page} + 1)}"
-            >다음</a
-          >
+          </div>
         </div>
       </section>
 
-      <section class="empty-state" th:if="${#lists.isEmpty(posts.content)}">
-        <p>아직 작성된 게시글이 없습니다. 첫 번째 글을 작성해보세요!</p>
-        <div class="board-actions">
-          <a
-            class="button"
-            th:if="${isAuthenticated}"
-            th:href="@{/posts/new(boardId=${board.id})}"
-            >글쓰기</a
-          >
-          <a
-            class="button button-secondary"
-            th:if="${!isAuthenticated}"
-            th:href="@{/auth/login(redirect=${'/posts/new?boardId=' + board.id})}"
-            >글쓰기</a
-          >
+      <!-- Board Controls -->
+      <section class="board-controls">
+        <div class="board-controls-left">
+          <div class="view-toggle">
+            <button class="view-toggle-btn active" data-view="grid" title="그리드 뷰">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+            </button>
+            <button class="view-toggle-btn" data-view="list" title="리스트 뷰">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </div>
-        <p
-          class="board-login-hint"
-          th:if="${!isAuthenticated}"
-        >
-          로그인하면 첫 번째 글의 주인공이 될 수 있어요!
-        </p>
+        
+        <div class="board-controls-center">
+          <div class="sort-controls">
+            <select class="input input--sm" onchange="sortPosts(this.value)">
+              <option value="createdAt,desc">최신순</option>
+              <option value="viewCount,desc">조회수순</option>
+              <option value="createdAt,asc">오래된순</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="board-controls-right">
+          <div class="search-box">
+            <input type="text" class="input input--sm" placeholder="제목으로 검색..." onkeyup="searchPosts(this.value)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- Posts Section -->
+      <section class="posts-section" th:if="${!#lists.isEmpty(posts.content)}">
+        <div class="posts-container" id="postsContainer">
+          <div class="posts-grid" id="postsGrid">
+            <article class="post-card board-post-card" th:each="post : ${posts.content}">
+              <div class="post-card-header">
+                <div class="post-card-author">
+                  <div class="post-card-avatar" th:text="${#strings.substring(post.author.nickname, 0, 1)}"></div>
+                  <div class="post-card-author-info">
+                    <span class="post-card-author-name" th:text="${post.author.nickname}"></span>
+                    <span class="post-card-time" th:text="${#temporals.format(post.createdAt, 'MM-dd HH:mm')}"></span>
+                  </div>
+                </div>
+                <div class="post-card-menu">
+                  <button class="post-menu-btn" onclick="togglePostMenu(this)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="1"></circle>
+                      <circle cx="19" cy="12" r="1"></circle>
+                      <circle cx="5" cy="12" r="1"></circle>
+                    </svg>
+                  </button>
+                  <div class="post-menu-dropdown">
+                    <a href="#" class="post-menu-item">북마크</a>
+                    <a href="#" class="post-menu-item">공유</a>
+                    <a href="#" class="post-menu-item">신고</a>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="post-card-body">
+                <h3 class="post-card-title">
+                  <a th:href="@{'/posts/' + ${post.id}}" th:text="${post.title}"></a>
+                </h3>
+                <p class="post-card-excerpt" th:text="${#strings.abbreviate(post.content, 200)}"></p>
+              </div>
+              
+              <div class="post-card-footer">
+                <div class="post-card-stats">
+                  <div class="post-card-stat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <span th:text="${#numbers.formatInteger(post.viewCount, 1, 'COMMA')}"></span>
+                  </div>
+                  <div class="post-card-stat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span th:text="${post.commentCount}"></span>
+                  </div>
+                  <div class="post-card-stat">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 9V5a3 3 0 0 0-6 0v4"></path>
+                      <path d="M6 9h.01"></path>
+                      <path d="M6 13h8l-2 2"></path>
+                    </svg>
+                    <span th:text="${post.voteScore}"></span>
+                  </div>
+                </div>
+                <div class="post-card-actions">
+                  <button class="post-action-btn" onclick="toggleBookmark(${post.id})">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                  </button>
+                  <button class="post-action-btn" onclick="sharePost('${post.id}', '${post.title}')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="18" cy="5" r="3"></circle>
+                      <circle cx="6" cy="12" r="3"></circle>
+                      <circle cx="18" cy="19" r="3"></circle>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-wrapper">
+          <nav class="pagination-nav">
+            <a
+              th:if="${posts.page > 0}"
+              th:href="@{'/boards/' + ${board.slug} + '?page=' + (${posts.page} - 1)}"
+              class="btn btn--ghost btn--sm"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15,18 9,12 15,6"></polyline>
+              </svg>
+              이전
+            </a>
+            
+            <div class="pagination-info">
+              <span th:text="${posts.totalPages > 0 ? (posts.page + 1) + ' / ' + posts.totalPages : '1 / 1'}"></span>
+            </div>
+            
+            <a
+              th:if="${posts.hasNext}"
+              th:href="@{'/boards/' + ${board.slug} + '?page=' + (${posts.page} + 1)}"
+              class="btn btn--ghost btn--sm"
+            >
+              다음
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9,18 15,12 9,6"></polyline>
+              </svg>
+            </a>
+          </nav>
+        </div>
+      </section>
+
+      <!-- Empty State -->
+      <section class="empty-state" th:if="${#lists.isEmpty(posts.content)}">
+        <div class="empty-state-content">
+          <div class="empty-state-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14,2 14,8 20,8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <h3 class="empty-state-title">아직 작성된 게시글이 없습니다</h3>
+          <p class="empty-state-description">첫 번째 글을 작성해서 커뮤니티를 시작해보세요!</p>
+          <div class="empty-state-actions">
+            <a
+              th:if="${isAuthenticated}"
+              class="btn btn--primary btn--lg"
+              th:href="@{/posts/new(boardId=${board.id})}"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              첫 글 작성하기
+            </a>
+            <a
+              th:if="${!isAuthenticated}"
+              class="btn btn--secondary btn--lg"
+              th:href="@{/auth/login(redirect=${'/posts/new?boardId=' + board.id})}"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                <polyline points="10,17 15,12 10,7"></polyline>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+              </svg>
+              로그인 후 글쓰기
+            </a>
+          </div>
+          <div class="empty-state-hint" th:if="${!isAuthenticated}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12,6 12,12 16,14"></polyline>
+            </svg>
+            <span>로그인하면 첫 번째 글의 주인공이 될 수 있어요!</span>
+          </div>
+        </div>
       </section>
     </main>
     <footer th:replace="~{fragments/layout :: footer}"></footer>

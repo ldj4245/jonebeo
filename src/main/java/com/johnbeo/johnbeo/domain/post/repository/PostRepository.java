@@ -37,4 +37,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @EntityGraph(attributePaths = {"board"})
     List<Post> findTop5ByAuthorIdOrderByCreatedAtDesc(Long authorId);
+
+    @EntityGraph(attributePaths = {"author", "board"})
+    List<Post> findByCreatedAtAfter(Instant since, Pageable pageable);
 }

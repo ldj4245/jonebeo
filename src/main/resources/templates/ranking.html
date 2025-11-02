@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}" />
+  </head>
+  <body>
+    <header th:replace="~{fragments/layout :: header}"></header>
+    
+    <main class="container board-container">
+      <!-- Page Header -->
+      <section class="board-hero">
+        <div class="board-hero-content" style="grid-template-columns: 1fr;">
+          <div class="board-hero-text" style="text-align: center;">
+            <div class="board-badge" style="margin: 0 auto;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"></polygon>
+              </svg>
+              랭킹
+            </div>
+            <h1 class="board-title">사용자 랭킹</h1>
+            <p class="board-description">활발한 활동으로 커뮤니티에 기여한 사용자들을 확인하세요</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ranking Tabs -->
+      <section class="board-controls">
+        <div class="board-controls-center" style="flex: 1; justify-content: center;">
+          <div class="tabs">
+            <div class="tabs__list">
+              <a th:href="@{/ranking(type='level')}" 
+                 th:classappend="${rankingType == 'level' ? 'tabs__trigger--active' : ''}"
+                 class="tabs__trigger">레벨 순위</a>
+              <a th:href="@{/ranking(type='exp')}" 
+                 th:classappend="${rankingType == 'exp' ? 'tabs__trigger--active' : ''}"
+                 class="tabs__trigger">경험치 순위</a>
+              <a th:href="@{/ranking(type='posts')}" 
+                 th:classappend="${rankingType == 'posts' ? 'tabs__trigger--active' : ''}"
+                 class="tabs__trigger">게시글 순위</a>
+              <a th:href="@{/ranking(type='upvotes')}" 
+                 th:classappend="${rankingType == 'upvotes' ? 'tabs__trigger--active' : ''}"
+                 class="tabs__trigger">추천 순위</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ranking Table -->
+      <section class="posts-section">
+        <div class="card">
+          <div class="card__body">
+            <table class="ranking-table">
+              <thead>
+                <tr>
+                  <th>순위</th>
+                  <th>사용자</th>
+                  <th>레벨</th>
+                  <th>경험치</th>
+                  <th>게시글</th>
+                  <th>댓글</th>
+                  <th>받은 추천</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="activity, iter : ${rankings.content}">
+                  <td class="ranking-rank">
+                    <span th:class="${iter.index < 3 ? 'ranking-medal ranking-medal-' + (iter.index + 1) : 'ranking-number'}"
+                          th:text="${iter.index + 1 + (rankings.page * rankings.size)}"></span>
+                  </td>
+                  <td class="ranking-user">
+                    <div class="ranking-user-info">
+                      <div class="avatar avatar--sm" th:text="${#strings.substring(activity.memberNickname, 0, 1)}"></div>
+                      <span th:text="${activity.memberNickname}"></span>
+                    </div>
+                  </td>
+                  <td>
+                    <span th:class="'badge badge--' + ${#strings.toLowerCase(activity.levelTier)}" 
+                          th:text="'Lv.' + ${activity.level}"></span>
+                  </td>
+                  <td th:text="${#numbers.formatInteger(activity.experiencePoints, 1, 'COMMA')} + ' XP'"></td>
+                  <td th:text="${#numbers.formatInteger(activity.totalPosts, 1, 'COMMA')}"></td>
+                  <td th:text="${#numbers.formatInteger(activity.totalComments, 1, 'COMMA')}"></td>
+                  <td th:text="${#numbers.formatInteger(activity.totalUpvotes, 1, 'COMMA')}"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-wrapper">
+          <nav class="pagination-nav">
+            <a th:if="${rankings.page > 0}"
+               th:href="@{/ranking(type=${rankingType}, page=${rankings.page - 1})}"
+               class="btn btn--ghost btn--sm">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15,18 9,12 15,6"></polyline>
+              </svg>
+              이전
+            </a>
+            
+            <div class="pagination-info">
+              <span th:text="${rankings.totalPages > 0 ? (rankings.page + 1) + ' / ' + rankings.totalPages : '1 / 1'}"></span>
+            </div>
+            
+            <a th:if="${rankings.hasNext}"
+               th:href="@{/ranking(type=${rankingType}, page=${rankings.page + 1})}"
+               class="btn btn--ghost btn--sm">
+              다음
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9,18 15,12 9,6"></polyline>
+              </svg>
+            </a>
+          </nav>
+        </div>
+      </section>
+    </main>
+    
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+    
+    <style>
+      .ranking-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      
+      .ranking-table th {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 2px solid var(--color-border);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-muted);
+        font-size: var(--font-size-sm);
+      }
+      
+      .ranking-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--color-border);
+      }
+      
+      .ranking-rank {
+        width: 80px;
+        text-align: center;
+      }
+      
+      .ranking-medal {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-weight: var(--font-weight-bold);
+        color: white;
+      }
+      
+      .ranking-medal-1 { background: linear-gradient(135deg, #FFD700, #FFA500); }
+      .ranking-medal-2 { background: linear-gradient(135deg, #C0C0C0, #808080); }
+      .ranking-medal-3 { background: linear-gradient(135deg, #CD7F32, #8B4513); }
+      
+      .ranking-number {
+        color: var(--color-text-muted);
+        font-weight: var(--font-weight-semibold);
+      }
+      
+      .ranking-user-info {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-3);
+      }
+      
+      .badge--bronze { background: linear-gradient(135deg, #CD7F32, #8B4513); }
+      .badge--silver { background: linear-gradient(135deg, #C0C0C0, #808080); }
+      .badge--gold { background: linear-gradient(135deg, #FFD700, #FFA500); }
+      .badge--diamond { background: linear-gradient(135deg, #B9F2FF, #00CED1); }
+    </style>
+  </body>
+</html>
+

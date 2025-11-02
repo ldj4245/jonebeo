@@ -1,95 +1,240 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
   <head th:replace="~{fragments/layout :: head(${pageTitle})}">
+    <link rel="stylesheet" th:href="@{/css/coin-detail.css}" />
+    <!-- TradingView Widget -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <!-- Chart.js for additional charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
-  <header th:replace="~{fragments/layout :: header}"></header>
-    <main class="container">
-      <section class="coin-detail-header">
-        <div class="coin-detail-title">
-          <h1 th:text="${coin.name}"></h1>
-          <div class="coin-detail-meta">
-            <span th:text="${'#' + #strings.toUpperCase(coin.symbol)}"></span>
-            <span th:text="${'가격 통화: ' + vsCurrency}"></span>
-            <a
-              th:if="${coin.homepage != null && !coin.homepage.isBlank()}"
-              class="button-secondary button-compact"
-              th:href="${coin.homepage}"
-              target="_blank"
-              rel="noopener"
-              >공식 사이트</a
-            >
+    <header th:replace="~{fragments/layout :: header}"></header>
+    <main class="coin-detail-container">
+      <!-- Breadcrumb -->
+      <nav class="breadcrumb">
+        <a th:href="@{/}">홈</a>
+        <span class="breadcrumb-separator">/</span>
+        <a th:href="@{/market}">시장</a>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-current" th:text="${coin.name}"></span>
+      </nav>
+
+      <!-- Coin Header -->
+      <section class="coin-header">
+        <div class="coin-header-content">
+          <div class="coin-header-info">
+            <div class="coin-badge" th:if="${coin.image != null}">
+              <img th:src="${coin.image}" th:alt="${coin.name}" class="coin-image" />
+            </div>
+            <div class="coin-title-section">
+              <h1 class="coin-title" th:text="${coin.name}"></h1>
+              <div class="coin-meta">
+                <span class="coin-symbol" th:text="'#' + #strings.toUpperCase(coin.symbol)}"></span>
+                <span class="coin-rank" th:if="${coin.marketCapRank != null}" th:text="'Rank #' + ${coin.marketCapRank}"></span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="coin-price-section">
+            <div class="coin-price">
+              <span class="coin-current-price" th:text="${coin.currentPrice == null ? '-' : #numbers.formatDecimal(coin.currentPrice, 0, 'COMMA', 2, 'POINT') + ' ' + vsCurrency}"></span>
+              <span class="coin-change" 
+                    th:classappend="${coin.priceChangePercentage24h != null && coin.priceChangePercentage24h >= 0} ? 'coin-change--positive' : 'coin-change--negative'"
+                    th:text="${coin.priceChangePercentage24h == null ? '-' : #numbers.formatDecimal(coin.priceChangePercentage24h, 1, 'COMMA', 2, 'POINT') + '%'}"></span>
+            </div>
+            <div class="coin-price-24h">
+              <span class="price-24h-label">24h 고가/저가</span>
+              <span class="price-24h-value">
+                <span th:text="${coin.high24h == null ? '-' : #numbers.formatDecimal(coin.high24h, 0, 'COMMA', 2, 'POINT')}"></span>
+                /
+                <span th:text="${coin.low24h == null ? '-' : #numbers.formatDecimal(coin.low24h, 0, 'COMMA', 2, 'POINT')}"></span>
+              </span>
+            </div>
+          </div>
+          
+          <div class="coin-actions">
+            <button class="btn btn--primary btn--sm" onclick="addToWatchlist()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+              관심목록 추가
+            </button>
+            <a th:if="${coin.homepage != null && !coin.homepage.isBlank()}" 
+               th:href="${coin.homepage}" 
+               target="_blank" 
+               rel="noopener"
+               class="btn btn--secondary btn--sm">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15,3 21,3 21,9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+              공식 사이트
+            </a>
           </div>
         </div>
-        <div class="coin-detail-stats">
-          <div class="stat-card">
-            <div class="stat-label">현재가</div>
-            <div class="stat-value" th:text="${coin.currentPrice == null ? '-' : #numbers.formatDecimal(coin.currentPrice, 0, 'COMMA', 2, 'POINT') + ' ' + vsCurrency}"></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">24시간 변동률</div>
-            <div
-              class="stat-value"
-              th:classappend="${coin.priceChangePercentage24h != null && coin.priceChangePercentage24h >= 0} ? ' is-up' : ' is-down'"
-              th:text="${coin.priceChangePercentage24h == null ? '-' : #numbers.formatDecimal(coin.priceChangePercentage24h, 1, 'COMMA', 2, 'POINT') + '%'}"
-            ></div>
-          </div>
+      </section>
+
+      <!-- Coin Stats Grid -->
+      <section class="coin-stats">
+        <div class="coin-stats-grid">
           <div class="stat-card">
             <div class="stat-label">시가총액</div>
             <div class="stat-value" th:text="${coin.marketCap == null ? '-' : #numbers.formatDecimal(coin.marketCap, 0, 'COMMA', 0, 'POINT') + ' ' + vsCurrency}"></div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">24h 고가 / 저가</div>
-            <div class="stat-value">
-              <span th:text="${coin.high24h == null ? '-' : #numbers.formatDecimal(coin.high24h, 0, 'COMMA', 2, 'POINT')}"></span>
-              /
-              <span th:text="${coin.low24h == null ? '-' : #numbers.formatDecimal(coin.low24h, 0, 'COMMA', 2, 'POINT')}"></span>
-            </div>
+            <div class="stat-label">24시간 거래량</div>
+            <div class="stat-value" th:text="${coin.totalVolume == null ? '-' : #numbers.formatDecimal(coin.totalVolume, 0, 'COMMA', 0, 'POINT') + ' ' + vsCurrency}"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">순환 공급량</div>
+            <div class="stat-value" th:text="${coin.circulatingSupply == null ? '-' : #numbers.formatDecimal(coin.circulatingSupply, 0, 'COMMA', 0, 'POINT')}"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">최대 공급량</div>
+            <div class="stat-value" th:text="${coin.maxSupply == null ? '-' : #numbers.formatDecimal(coin.maxSupply, 0, 'COMMA', 0, 'POINT')}"></div>
           </div>
         </div>
       </section>
 
-      <section class="coin-chart-section">
+      <!-- TradingView Chart -->
+      <section class="chart-section">
         <div class="chart-header">
-          <h2>가격 차트</h2>
-          <div class="chart-range-selector">
-            <button type="button" data-days="7">7일</button>
-            <button type="button" data-days="30" class="is-active">30일</button>
-            <button type="button" data-days="90">90일</button>
-            <button type="button" data-days="180">180일</button>
+          <h2 class="chart-title">가격 차트</h2>
+          <div class="chart-controls">
+            <button class="chart-period-btn active" data-period="1D" onclick="changeChartPeriod('1D')">1D</button>
+            <button class="chart-period-btn" data-period="7D" onclick="changeChartPeriod('7D')">7D</button>
+            <button class="chart-period-btn" data-period="1M" onclick="changeChartPeriod('1M')">1M</button>
+            <button class="chart-period-btn" data-period="3M" onclick="changeChartPeriod('3M')">3M</button>
+            <button class="chart-period-btn" data-period="1Y" onclick="changeChartPeriod('1Y')">1Y</button>
           </div>
         </div>
-        <div class="chart-wrapper">
-          <div
-            id="tradingviewWidgetContainer"
-            class="tradingview-widget-container"
-            th:if="${tradingViewSymbol != null}"
-          >
-            <div id="tradingviewWidget"></div>
-            <div class="tradingview-widget-copyright">
-              <a
-                th:href="${'https://kr.tradingview.com/symbols/' + #strings.replace(tradingViewSymbol, ':', '-') + '/'}"
-                rel="noopener"
-                target="_blank"
-              >
-                <span>트레이딩뷰 제공</span>
-              </a>
-            </div>
+        <div class="chart-container">
+          <div id="tradingview_chart" class="tradingview-widget-container">
+            <div class="tradingview-widget-container__widget"></div>
           </div>
-          <canvas id="coinChart" height="320"></canvas>
         </div>
       </section>
 
+      <!-- Market Data and News Grid -->
+      <div class="coin-content-grid">
+        <!-- Market Data -->
+        <section class="market-data-section">
+          <div class="section-header">
+            <h2 class="section-title">시장 데이터</h2>
+          </div>
+          <div class="market-data-content">
+            <div class="market-data-item">
+              <span class="market-data-label">가격 변동 (7일)</span>
+              <span class="market-data-value" 
+                    th:classappend="${coin.priceChangePercentage7dInCurrency != null && coin.priceChangePercentage7dInCurrency >= 0} ? 'market-data-value--positive' : 'market-data-value--negative'"
+                    th:text="${coin.priceChangePercentage7dInCurrency == null ? '-' : #numbers.formatDecimal(coin.priceChangePercentage7dInCurrency, 1, 'COMMA', 2, 'POINT') + '%'}"></span>
+            </div>
+            <div class="market-data-item">
+              <span class="market-data-label">가격 변동 (14일)</span>
+              <span class="market-data-value" 
+                    th:classappend="${coin.priceChangePercentage14dInCurrency != null && coin.priceChangePercentage14dInCurrency >= 0} ? 'market-data-value--positive' : 'market-data-value--negative'"
+                    th:text="${coin.priceChangePercentage14dInCurrency == null ? '-' : #numbers.formatDecimal(coin.priceChangePercentage14dInCurrency, 1, 'COMMA', 2, 'POINT') + '%'}"></span>
+            </div>
+            <div class="market-data-item">
+              <span class="market-data-label">가격 변동 (30일)</span>
+              <span class="market-data-value" 
+                    th:classappend="${coin.priceChangePercentage30dInCurrency != null && coin.priceChangePercentage30dInCurrency >= 0} ? 'market-data-value--positive' : 'market-data-value--negative'"
+                    th:text="${coin.priceChangePercentage30dInCurrency == null ? '-' : #numbers.formatDecimal(coin.priceChangePercentage30dInCurrency, 1, 'COMMA', 2, 'POINT') + '%'}"></span>
+            </div>
+            <div class="market-data-item">
+              <span class="market-data-label">시가총액 변동 (24h)</span>
+              <span class="market-data-value" 
+                    th:classappend="${coin.marketCapChangePercentage24h != null && coin.marketCapChangePercentage24h >= 0} ? 'market-data-value--positive' : 'market-data-value--negative'"
+                    th:text="${coin.marketCapChangePercentage24h == null ? '-' : #numbers.formatDecimal(coin.marketCapChangePercentage24h, 1, 'COMMA', 2, 'POINT') + '%'}"></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Community Posts -->
+        <section class="community-posts-section">
+          <div class="section-header">
+            <h2 class="section-title">커뮤니티 토론</h2>
+            <a th:href="@{'/search?coin=' + ${coin.id}}" class="btn btn--ghost btn--sm">전체보기</a>
+          </div>
+          <div class="community-posts-content">
+            <div class="post-list">
+              <!-- 여기에 코인 관련 게시글들이 표시됩니다 -->
+              <div class="empty-state">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="empty-state-icon">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <h3 class="empty-state-title">아직 토론이 없습니다</h3>
+                <p class="empty-state-description">이 코인에 대한 첫 토론을 시작해보세요!</p>
+                <a th:href="@{'/posts/new?coin=' + ${coin.id}}" class="btn btn--primary btn--sm">토론 시작하기</a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Coin Description -->
       <section class="coin-description" th:if="${coin.description != null && !coin.description.isBlank()}">
-        <h2>코인 소개</h2>
-        <p th:text="${coin.description}"></p>
+        <div class="section-header">
+          <h2 class="section-title">코인 소개</h2>
+        </div>
+        <div class="coin-description-content" th:utext="${coin.description}"></div>
       </section>
     </main>
-  <footer th:replace="~{fragments/layout :: footer}"></footer>
-    <script
-      th:src="@{/js/coin-detail.js}"
-      th:attr="data-chart=${chartData},data-coin-id=${coin.id},data-vs-currency=${vsCurrency},data-default-days=${days},data-tradingview-symbol=${tradingViewSymbol}"
-    ></script>
+    
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+    
+    <!-- JavaScript -->
+    <script>
+      // TradingView Widget 초기화
+      function initTradingView() {
+        new TradingView.widget({
+          "width": "100%",
+          "height": "500",
+          "symbol": "BINANCE:" + document.querySelector('.coin-symbol').textContent.replace('#', '') + "USDT",
+          "interval": "D",
+          "timezone": "Asia/Seoul",
+          "theme": "dark",
+          "style": "1",
+          "locale": "kr",
+          "toolbar_bg": "#f1f3f6",
+          "enable_publishing": false,
+          "hide_top_toolbar": false,
+          "hide_legend": false,
+          "save_image": false,
+          "container_id": "tradingview_chart"
+        });
+      }
+
+      // 차트 기간 변경
+      function changeChartPeriod(period) {
+        // 활성 버튼 업데이트
+        document.querySelectorAll('.chart-period-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        document.querySelector(`[data-period="${period}"]`).classList.add('active');
+        
+        // TradingView 차트 업데이트
+        // 실제 구현에서는 TradingView API를 사용하여 차트를 업데이트
+        console.log('Chart period changed to:', period);
+      }
+
+      // 관심목록 추가
+      function addToWatchlist() {
+        // 실제 구현에서는 API 호출
+        alert('관심목록에 추가되었습니다!');
+      }
+
+      // 페이지 로드 시 TradingView 초기화
+      document.addEventListener('DOMContentLoaded', function() {
+        // TradingView가 로드된 후 초기화
+        if (typeof TradingView !== 'undefined') {
+          initTradingView();
+        } else {
+          // TradingView가 아직 로드되지 않았다면 대기
+          setTimeout(initTradingView, 1000);
+        }
+      });
+    </script>
   </body>
 </html>

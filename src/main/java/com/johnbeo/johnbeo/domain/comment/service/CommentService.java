@@ -12,6 +12,7 @@ import com.johnbeo.johnbeo.domain.member.repository.MemberRepository;
 import com.johnbeo.johnbeo.domain.post.entity.Post;
 import com.johnbeo.johnbeo.domain.post.repository.PostRepository;
 import com.johnbeo.johnbeo.security.model.MemberPrincipal;
+import com.johnbeo.johnbeo.domain.member.event.CommentCreatedEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<CommentResponse> getCommentsByPost(Long postId) {
         List<Comment> comments = commentRepository.findByPostIdOrderByCreatedAtAsc(postId);
@@ -78,6 +81,10 @@ public class CommentService {
             .build();
 
         Comment saved = commentRepository.save(comment);
+        
+        // 댓글 생성 이벤트 발행
+        eventPublisher.publishEvent(new CommentCreatedEvent(saved));
+        
         return toResponse(saved, List.of());
     }
 

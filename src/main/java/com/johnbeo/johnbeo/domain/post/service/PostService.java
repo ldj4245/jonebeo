@@ -17,8 +17,10 @@ import com.johnbeo.johnbeo.domain.post.entity.Post;
 import com.johnbeo.johnbeo.domain.post.repository.PostRepository;
 import com.johnbeo.johnbeo.domain.post.service.support.PostViewTracker;
 import com.johnbeo.johnbeo.security.model.MemberPrincipal;
+import com.johnbeo.johnbeo.domain.member.event.PostCreatedEvent;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -35,6 +37,7 @@ public class PostService {
     private final MemberRepository memberRepository;
     private final BookmarkService bookmarkService;
     private final PostViewTracker postViewTracker;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PageResponse<PostSummaryResponse> getAllPosts(Pageable pageable) {
         Page<Post> page = postRepository.findAll(pageable);
@@ -75,8 +78,12 @@ public class PostService {
             .content(request.content())
             .build();
 
-    Post saved = postRepository.save(post);
-    return toPostResponse(saved, principal);
+        Post saved = postRepository.save(post);
+        
+        // 게시글 생성 이벤트 발행
+        eventPublisher.publishEvent(new PostCreatedEvent(saved));
+        
+        return toPostResponse(saved, principal);
     }
 
     @Transactional

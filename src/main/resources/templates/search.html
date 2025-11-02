@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="~{fragments/layout :: head(${pageTitle})}">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}" />
+  </head>
+  <body>
+    <header th:replace="~{fragments/layout :: header}"></header>
+    
+    <main class="container board-container">
+      <!-- Search Header -->
+      <section class="board-hero">
+        <div class="board-hero-content" style="grid-template-columns: 1fr;">
+          <div class="board-hero-text" style="text-align: center;">
+            <div class="board-badge" style="margin: 0 auto;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              검색
+            </div>
+            <h1 class="board-title">검색 결과</h1>
+            <p class="board-description" th:if="${query != null and !query.isBlank()}">
+              "<span th:text="${query}"></span>"에 대한 검색 결과 <span th:text="${results.totalElements}"></span>개
+            </p>
+            <p class="board-description" th:if="${query == null or query.isBlank()}">
+              검색어를 입력해주세요
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Search Results -->
+      <section class="posts-section" th:if="${!results.isEmpty()}">
+        <div class="posts-grid">
+          <article class="board-post-card" th:each="post : ${results.content}">
+            <div class="post-card-header">
+              <div class="post-card-author">
+                <div class="avatar avatar--sm" th:text="${#strings.substring(post.author.nickname, 0, 1)}"></div>
+                <div class="post-card-author-info">
+                  <span class="post-card-author-name" th:text="${post.author.nickname}"></span>
+                  <span class="post-card-meta">
+                    <span th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
+                    <span> · </span>
+                    <span th:text="${post.board.name}"></span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <a th:href="@{/posts/{id}(id=${post.id})}" class="post-card-content">
+              <h3 class="post-card-title" th:text="${post.title}"></h3>
+              <p class="post-card-excerpt" th:text="${#strings.abbreviate(post.content, 150)}"></p>
+            </a>
+
+            <div class="post-card-footer">
+              <div class="post-card-stats">
+                <span class="post-card-stat">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <span th:text="${#numbers.formatInteger(post.viewCount, 1, 'COMMA')}"></span>
+                </span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-wrapper">
+          <nav class="pagination-nav">
+            <a th:if="${results.hasPrevious()}"
+               th:href="@{/search(q=${query}, page=${results.number - 1})}"
+               class="btn btn--ghost btn--sm">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15,18 9,12 15,6"></polyline>
+              </svg>
+              이전
+            </a>
+            
+            <div class="pagination-info">
+              <span th:text="${results.totalPages > 0 ? (results.number + 1) + ' / ' + results.totalPages : '1 / 1'}"></span>
+            </div>
+            
+            <a th:if="${results.hasNext()}"
+               th:href="@{/search(q=${query}, page=${results.number + 1})}"
+               class="btn btn--ghost btn--sm">
+              다음
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9,18 15,12 9,6"></polyline>
+              </svg>
+            </a>
+          </nav>
+        </div>
+      </section>
+
+      <!-- Empty State -->
+      <section class="empty-state" th:if="${results.isEmpty() and query != null and !query.isBlank()}">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="empty-state-icon">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <h3 class="empty-state-title">검색 결과가 없습니다</h3>
+        <p class="empty-state-description">다른 검색어로 다시 시도해보세요.</p>
+      </section>
+    </main>
+    
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+  </body>
+</html>
+

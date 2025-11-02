@@ -43,7 +43,7 @@ public class HomeFeedService {
         Instant now = Instant.now(clock);
         Instant trendingSince = now.minus(2, ChronoUnit.DAYS);
 
-        List<Post> trendingPosts = postRepository.findTrendingSince(trendingSince, page(DEFAULT_CARD_SIZE));
+        List<Post> trendingPosts = postRepository.findByCreatedAtAfter(trendingSince, page(DEFAULT_CARD_SIZE));
         List<Post> freshPosts = postRepository.findRecent(page(DEFAULT_CARD_SIZE));
         Map<BoardType, List<HomePostCard>> boardFeeds = buildBoardFeeds();
         List<Comment> latestComments = commentRepository

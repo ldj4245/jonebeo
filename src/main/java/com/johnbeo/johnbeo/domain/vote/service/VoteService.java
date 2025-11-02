@@ -12,8 +12,10 @@ import com.johnbeo.johnbeo.domain.vote.entity.Vote;
 import com.johnbeo.johnbeo.domain.vote.model.VoteTargetType;
 import com.johnbeo.johnbeo.domain.vote.repository.VoteRepository;
 import com.johnbeo.johnbeo.security.model.MemberPrincipal;
+import com.johnbeo.johnbeo.domain.member.event.VoteCreatedEvent;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,13 +28,15 @@ public class VoteService {
     private final MemberRepository memberRepository;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public VoteSummaryResponse votePost(Long postId, int value, MemberPrincipal principal) {
         Member member = requireMember(principal);
         Post post = postRepository.findById(postId)
             .orElseThrow(() -> new ResourceNotFoundException("게시글을 찾을 수 없습니다: " + postId));
-        return applyVote(member, post.getId(), VoteTargetType.POST, value);
+        VoteSummaryResponse response = applyVote(member, post.getId(), VoteTargetType.POST, value, post, null);
+        return response;
     }
 
     @Transactional
@@ -40,7 +44,8 @@ public class VoteService {
         Member member = requireMember(principal);
         Comment comment = commentRepository.findById(commentId)
             .orElseThrow(() -> new ResourceNotFoundException("댓글을 찾을 수 없습니다: " + commentId));
-        return applyVote(member, comment.getId(), VoteTargetType.COMMENT, value);
+        VoteSummaryResponse response = applyVote(member, comment.getId(), VoteTargetType.COMMENT, value, null, comment);
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -59,12 +64,13 @@ public class VoteService {
         return createSummary(commentId, VoteTargetType.COMMENT, member);
     }
 
-    private VoteSummaryResponse applyVote(Member member, Long targetId, VoteTargetType targetType, int value) {
+    private VoteSummaryResponse applyVote(Member member, Long targetId, VoteTargetType targetType, int value, Post post, Comment comment) {
         validateValue(value);
         Vote vote = voteRepository.findByMemberAndTargetIdAndTargetType(member, targetId, targetType)
             .orElse(null);
 
         boolean deleted = false;
+        boolean created = false;
         if (vote == null) {
             Vote newVote = Vote.builder()
                 .member(member)
@@ -72,7 +78,15 @@ public class VoteService {
                 .targetType(targetType)
                 .value(value)
                 .build();
-            voteRepository.save(newVote);
+            Vote saved = voteRepository.save(newVote);
+            created = true;
+            
+            // 투표 생성 이벤트 발행
+            if (post != null) {
+                eventPublisher.publishEvent(new VoteCreatedEvent(saved, post));
+            } else if (comment != null) {
+                eventPublisher.publishEvent(new VoteCreatedEvent(saved, comment));
+            }
         } else if (Objects.equals(vote.getValue(), value)) {
             voteRepository.delete(vote);
             deleted = true;
